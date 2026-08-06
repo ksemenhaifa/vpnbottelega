@@ -1,0 +1,69 @@
+<!--
+  SEO-блок для <head> сайта veliora.clinic
+  ─────────────────────────────────────────────────────────────────────────────
+  Замените ВСЕ значения в {{двойных скобках}} на реальные данные клиники.
+  Этот блок ставится на КАЖДОЙ странице, но title / description / canonical / og:url
+  ОБЯЗАНЫ быть уникальными на каждой странице — иначе поисковики склеят страницы
+  и весь остальной SEO не сработает.
+-->
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- ── Title: 50–60 символов. Формула: Услуга + Город + Бренд ────────────── -->
+<title>{{Косметология в {{Городе}} — клиника Veliora}}</title>
+
+<!-- ── Description: 140–160 символов. Это текст, по которому кликают в выдаче.
+     Включите: что делаете, где, и причину кликнуть (бесплатная консультация и т.п.) -->
+<meta name="description" content="{{Клиника Veliora в {{городе}}: {{перечислите 3–4 главные услуги}}. Врачи с опытом от {{N}} лет, лицензия №{{номер}}. Бесплатная консультация — запись в WhatsApp.}}">
+
+<!-- ── Канонический адрес: защита от дублей (со слэшем/без, с utm-метками) ── -->
+<link rel="canonical" href="https://veliora.clinic{{/путь-страницы/}}">
+
+<!-- ── Индексация. Убедитесь, что здесь НЕТ noindex (частая причина «сайта нет в поиске») -->
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+
+<!-- ── Язык и регион ─────────────────────────────────────────────────────── -->
+<meta http-equiv="content-language" content="ru">
+<link rel="alternate" hreflang="ru" href="https://veliora.clinic{{/путь-страницы/}}">
+<link rel="alternate" hreflang="x-default" href="https://veliora.clinic{{/путь-страницы/}}">
+
+<!-- ── Open Graph: как ссылка выглядит в WhatsApp, Telegram, VK, Instagram ──
+     Критично именно для этого проекта: клиенты будут пересылать ссылку в мессенджерах.
+     Картинка: 1200×630 px, до 300 КБ, абсолютный URL (не относительный!). -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Veliora Clinic">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:title" content="{{Косметология в {{Городе}} — клиника Veliora}}">
+<meta property="og:description" content="{{Тот же текст, что в description, можно чуть короче.}}">
+<meta property="og:url" content="https://veliora.clinic{{/путь-страницы/}}">
+<meta property="og:image" content="https://veliora.clinic/img/og-cover.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="{{Интерьер клиники Veliora}}">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{Косметология в {{Городе}} — клиника Veliora}}">
+<meta name="twitter:description" content="{{Тот же текст, что в description.}}">
+<meta name="twitter:image" content="https://veliora.clinic/img/og-cover.jpg">
+
+<!-- ── Иконки ────────────────────────────────────────────────────────────── -->
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="{{#ffffff}}">
+
+<!-- ── Скорость загрузки (Core Web Vitals — фактор ранжирования) ──────────
+     preconnect только к доменам, которые реально используются. Лишние — вредят. -->
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="image" href="{{/img/hero.webp}}" fetchpriority="high">
+
+<!-- ── Подтверждение прав в панелях вебмастеров (получите коды в кабинетах) ─ -->
+<meta name="yandex-verification" content="{{код_из_Яндекс.Вебмастера}}">
+<meta name="google-site-verification" content="{{код_из_Google_Search_Console}}">
+
+<!-- ── Микроразметка: подключите содержимое seo/schema-medicalclinic.json ──
+     Без неё клиника не получит расширенный сниппет с адресом, телефоном и часами. -->
+<script type="application/ld+json">
+{{ вставьте сюда содержимое файла seo/schema-medicalclinic.json }}
+</script>

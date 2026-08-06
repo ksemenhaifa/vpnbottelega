@@ -1,0 +1,122 @@
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": ["MedicalClinic", "LocalBusiness"],
+      "@id": "https://veliora.clinic/#clinic",
+      "name": "Veliora Clinic",
+      "alternateName": "Клиника Veliora",
+      "url": "https://veliora.clinic/",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://veliora.clinic/img/logo.png",
+        "width": 512,
+        "height": 512
+      },
+      "image": [
+        "https://veliora.clinic/img/clinic-1.jpg",
+        "https://veliora.clinic/img/clinic-2.jpg"
+      ],
+      "description": "ЗАМЕНИТЕ: чем занимается клиника, 2–3 предложения, с ключевыми услугами и городом.",
+      "telephone": "+7XXXXXXXXXX",
+      "email": "info@veliora.clinic",
+      "priceRange": "$$",
+      "currenciesAccepted": "RUB",
+      "paymentAccepted": "Наличные, банковские карты, безналичный расчёт",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "ЗАМЕНИТЕ: улица, дом, офис",
+        "addressLocality": "ЗАМЕНИТЕ: город",
+        "addressRegion": "ЗАМЕНИТЕ: область/край",
+        "postalCode": "ЗАМЕНИТЕ",
+        "addressCountry": "RU"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": "00.000000",
+        "longitude": "00.000000"
+      },
+      "hasMap": "ЗАМЕНИТЕ: ссылка на карточку в Яндекс.Картах или 2ГИС",
+      "openingHoursSpecification": [
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+          "opens": "09:00",
+          "closes": "21:00"
+        },
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Saturday", "Sunday"],
+          "opens": "10:00",
+          "closes": "18:00"
+        }
+      ],
+      "sameAs": [
+        "https://www.instagram.com/ЗАМЕНИТЕ",
+        "https://vk.com/ЗАМЕНИТЕ",
+        "https://t.me/ЗАМЕНИТЕ",
+        "https://yandex.ru/maps/org/ЗАМЕНИТЕ",
+        "https://2gis.ru/firm/ЗАМЕНИТЕ"
+      ],
+      "areaServed": {
+        "@type": "City",
+        "name": "ЗАМЕНИТЕ: город"
+      },
+      "medicalSpecialty": ["Dermatology", "PlasticSurgery"],
+      "availableService": [
+        {
+          "@type": "MedicalProcedure",
+          "name": "ЗАМЕНИТЕ: услуга 1",
+          "url": "https://veliora.clinic/uslugi/service-1/",
+          "procedureType": "https://schema.org/NoninvasiveProcedure"
+        },
+        {
+          "@type": "MedicalProcedure",
+          "name": "ЗАМЕНИТЕ: услуга 2",
+          "url": "https://veliora.clinic/uslugi/service-2/",
+          "procedureType": "https://schema.org/NoninvasiveProcedure"
+        },
+        {
+          "@type": "MedicalProcedure",
+          "name": "ЗАМЕНИТЕ: услуга 3",
+          "url": "https://veliora.clinic/uslugi/service-3/",
+          "procedureType": "https://schema.org/NoninvasiveProcedure"
+        }
+      ],
+      "potentialAction": {
+        "@type": "ReserveAction",
+        "name": "Записаться в WhatsApp",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://wa.me/7XXXXXXXXXX",
+          "inLanguage": "ru",
+          "actionPlatform": [
+            "https://schema.org/DesktopWebPlatform",
+            "https://schema.org/MobileWebPlatform"
+          ]
+        }
+      }
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://veliora.clinic/#website",
+      "url": "https://veliora.clinic/",
+      "name": "Veliora Clinic",
+      "inLanguage": "ru-RU",
+      "publisher": { "@id": "https://veliora.clinic/#clinic" }
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://veliora.clinic/#org",
+      "name": "Veliora Clinic",
+      "url": "https://veliora.clinic/",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "telephone": "+7XXXXXXXXXX",
+        "contactType": "customer service",
+        "areaServed": "RU",
+        "availableLanguage": ["Russian"]
+      }
+    }
+  ]
+}

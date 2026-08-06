@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Шаблон карты сайта. Правила:
+  1. Только реально существующие страницы, отдающие код 200.
+  2. Адреса — строго в том виде, что в <link rel="canonical"> (со слэшем на конце или без,
+     но одинаково везде). Разнобой создаёт дубли.
+  3. lastmod ставьте настоящую дату изменения страницы. Фейковые даты Яндекс игнорирует,
+     и файл теряет смысл.
+  4. После загрузки — добавьте sitemap в Яндекс.Вебмастер и Google Search Console.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+
+  <url>
+    <loc>https://veliora.clinic/</loc>
+    <lastmod>2026-08-06</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://veliora.clinic/img/og-cover.jpg</image:loc>
+      <image:title>Клиника Veliora</image:title>
+    </image:image>
+  </url>
+
+  <url>
+    <loc>https://veliora.clinic/uslugi/</loc>
+    <lastmod>2026-08-06</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Отдельная страница на КАЖДУЮ услугу — это основной источник трафика.
+       Одностраничник по запросам вида «услуга + город» почти не ранжируется. -->
+  <url>
+    <loc>https://veliora.clinic/uslugi/service-1/</loc>
+    <lastmod>2026-08-06</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://veliora.clinic/uslugi/service-2/</loc>
+    <lastmod>2026-08-06</lastmod>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://veliora.clinic/vrachi/</loc>
+    <lastmod>2026-08-06</lastmod>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://veliora.clinic/ceny/</loc>
+    <lastmod>2026-08-06</lastmod>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://veliora.clinic/otzyvy/</loc>
+    <lastmod>2026-08-06</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://veliora.clinic/kontakty/</loc>
+    <lastmod>2026-08-06</lastmod>
+    <priority>0.6</priority>
+  </url>
+
+</urlset>

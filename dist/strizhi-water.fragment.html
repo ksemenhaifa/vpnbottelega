@@ -1,0 +1,1442 @@
+<title>Стрижи · Водоснабжение</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* ============================================================
+ *  Стрижи · Водоснабжение — стили модуля
+ *  Токены: светлая тема в :root, тёмная — через prefers-color-scheme
+ *  и [data-theme]. Компоненты ссылаются только на токены.
+ * ============================================================ */
+:root {
+  color-scheme: light;
+  --page: #f6f7f6;         /* фон страницы, чуть холодный */
+  --surface: #fcfcfb;      /* поверхность схемы и панелей */
+  --surface-2: #f0f2f1;    /* вторичная поверхность */
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11,11,11,.10);
+  --blue: #2a78d6;
+  --red: #e34948;
+  --div-mid: #e6e8e6;      /* середина дивергентной шкалы */
+  --seq-lo: #cde2fb;
+  --seq-hi: #0d366b;
+  --neutral: #c3c2b7;
+  --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;
+  --good-text: #006300;
+  --road: #e8eae8;
+  --water: #ffffff;        /* штрихи потока */
+  --focus: #2a78d6;
+  --shadow: 0 6px 24px rgba(20,30,40,.10);
+  --font: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0f100f; --surface: #1a1a19; --surface-2: #232422;
+    --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781; --grid: #2c2c2a; --axis: #383835;
+    --border: rgba(255,255,255,.10);
+    --blue: #3987e5; --red: #e66767; --div-mid: #3b3d3b; --seq-lo: #1c5cab; --seq-hi: #9ec5f4; --neutral: #4a4b48;
+    --good-text: #0ca30c; --road: #222422; --water: #dbe9ff; --shadow: 0 6px 24px rgba(0,0,0,.45);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0f100f; --surface: #1a1a19; --surface-2: #232422;
+  --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781; --grid: #2c2c2a; --axis: #383835;
+  --border: rgba(255,255,255,.10);
+  --blue: #3987e5; --red: #e66767; --div-mid: #3b3d3b; --seq-lo: #1c5cab; --seq-hi: #9ec5f4; --neutral: #4a4b48;
+  --good-text: #0ca30c; --road: #222422; --water: #dbe9ff; --shadow: 0 6px 24px rgba(0,0,0,.45);
+}
+
+html, body { margin: 0; background: var(--page); color: var(--ink); }
+body { font: 14px/1.45 var(--font); }
+.sw-app { display: flex; flex-direction: column; min-height: 100vh; background: var(--page); color: var(--ink); }
+.sw-app * { box-sizing: border-box; }
+.sw-app .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.sw-app h1 { font-size: 20px; font-weight: 600; margin: 0; letter-spacing: -.01em; text-wrap: balance; }
+.sw-app h3 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 18px 0 8px; }
+.sw-app h3:first-child { margin-top: 0; }
+.sw-app :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* ---------- Шапка ---------- */
+.sw-head { display: flex; flex-wrap: wrap; gap: 12px 28px; align-items: flex-end; padding: 16px 20px 12px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.sw-sub { color: var(--ink-2); font-size: 13px; margin-top: 2px; }
+.sw-stats { display: flex; flex-wrap: wrap; gap: 6px 22px; margin-left: auto; }
+.sw-stat { display: flex; flex-direction: column; gap: 1px; padding-left: 10px; border-left: 3px solid var(--axis); }
+.sw-stat-l { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.sw-stat-v { font-size: 18px; line-height: 1.1; color: var(--ink); }
+.sw-stat-v small { font-family: var(--font); font-size: 11px; color: var(--muted); margin-left: 5px; }
+.sw-lvl-good { border-left-color: var(--good); }
+.sw-lvl-warning { border-left-color: var(--warning); }
+.sw-lvl-serious { border-left-color: var(--serious); }
+.sw-lvl-critical { border-left-color: var(--critical); }
+.sw-lvl-info { border-left-color: var(--axis); }
+
+/* ---------- Раскладка ---------- */
+.sw-body { display: grid; grid-template-columns: minmax(0, 1fr) 380px; flex: 1; min-height: 0; }
+.sw-main { display: flex; flex-direction: column; min-width: 0; }
+.sw-side { border-left: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; min-height: 0; }
+@media (max-width: 960px) {
+  .sw-body { grid-template-columns: 1fr; }
+  .sw-side { border-left: 0; border-top: 1px solid var(--border); }
+  .sw-canvas { height: 62vw; min-height: 300px; }
+}
+
+/* ---------- Тулбар ---------- */
+.sw-toolbar { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; padding: 8px 14px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.sw-btn { font: inherit; font-size: 13px; padding: 5px 11px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface-2); color: var(--ink); cursor: pointer; }
+.sw-btn:hover { border-color: var(--axis); }
+.sw-btn.sw-primary { background: var(--blue); color: #fff; border-color: transparent; font-weight: 500; padding: 9px 14px; }
+.sw-btn.sw-ghost { background: transparent; }
+.sw-btn.is-on { background: var(--ink); color: var(--surface); border-color: transparent; }
+.sw-seg { display: inline-flex; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
+.sw-seg button { font: inherit; font-size: 13px; padding: 5px 12px; border: 0; background: var(--surface); color: var(--ink-2); cursor: pointer; }
+.sw-seg button + button { border-left: 1px solid var(--border); }
+.sw-seg button.is-on { background: var(--ink); color: var(--surface); }
+.sw-time { display: flex; align-items: center; gap: 8px; }
+.sw-time input[type=range] { width: 180px; accent-color: var(--blue); }
+.sw-time output { min-width: 44px; font-size: 14px; }
+.sw-play { width: 32px; text-align: center; padding: 5px 0; }
+.sw-zoom { display: flex; gap: 4px; margin-left: auto; }
+
+/* ---------- Схема ---------- */
+.sw-canvas { position: relative; flex: 1; min-height: 380px; height: 52vh; background: var(--surface); overflow: hidden; cursor: grab; }
+.sw-canvas:active { cursor: grabbing; }
+.sw-svg { width: 100%; height: 100%; display: block; touch-action: none; }
+.sw-road { fill: var(--road); }
+.sw-street-name { font: 500 15px var(--font); fill: var(--ink-2); letter-spacing: .02em; }
+.sw-pipe { stroke-linecap: round; transition: stroke .3s; }
+.sw-pipe.is-closed { stroke-dasharray: 3 5; opacity: .55; }
+.sw-flowline { stroke: var(--water); stroke-linecap: round; stroke-dasharray: 5 9; pointer-events: none; }
+@keyframes sw-dash { to { stroke-dashoffset: -14; } }
+.sw-junction { fill: var(--axis); }
+.sw-node { cursor: pointer; }
+.sw-house-body { stroke: var(--ink-2); stroke-width: 1; stroke-opacity: .55; transition: fill .3s; }
+.sw-house-body.is-empty { fill: none; stroke-dasharray: 2 2; }
+.sw-house-ring { fill: none; stroke: var(--ink); stroke-width: 0; }
+.sw-node.has-reading .sw-house-ring { stroke-width: 2; }
+.sw-node.is-warn .sw-house-ring { stroke: var(--serious); }
+.sw-node.is-alarm .sw-house-ring { stroke: var(--critical); stroke-width: 2.5; }
+.sw-halo { fill: none; stroke: var(--critical); stroke-width: 2; opacity: 0; }
+.sw-node.is-alarm .sw-halo { animation: sw-pulse 1.6s ease-out infinite; }
+.sw-node.is-leak .sw-halo { animation: sw-pulse 1.1s ease-out infinite; stroke: var(--red); }
+@keyframes sw-pulse { 0% { opacity: .9; transform: scale(.55); } 100% { opacity: 0; transform: scale(1.5); } }
+.sw-node.is-selected .sw-house-ring { stroke: var(--blue); stroke-width: 3; stroke-dasharray: none; }
+.sw-node.is-selected .sw-well-body { stroke: var(--blue); stroke-width: 3; }
+.sw-house-num { font: 7px var(--mono); fill: var(--muted); text-anchor: middle; pointer-events: none; }
+.sw-house-badge { font: 600 11px var(--font); fill: var(--critical); text-anchor: middle; pointer-events: none; }
+.sw-well-body { fill: var(--surface); stroke: var(--ink); stroke-width: 2; }
+.sw-well-drop { fill: var(--blue); }
+.sw-well .sw-halo { stroke: var(--blue); }
+.sw-well.is-off .sw-well-drop { fill: var(--muted); }
+.sw-well.is-off .sw-well-body, .sw-well.is-cv .sw-well-body { stroke-dasharray: 3 3; }
+.sw-well.is-cv .sw-well-drop { fill: var(--axis); }
+.sw-well-name { font: 600 11px var(--font); fill: var(--ink); text-anchor: middle; }
+.sw-well-badge { font: 9px var(--mono); fill: var(--ink-2); text-anchor: middle; }
+.sw-valve { cursor: pointer; }
+.sw-valve-body { fill: var(--surface); stroke: var(--ink-2); stroke-width: 1.5; }
+.sw-valve.is-closed .sw-valve-body { fill: var(--critical); stroke: var(--critical); }
+.sw-back-img { pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .sw-flowline, .sw-halo { animation: none !important; } .sw-node.is-alarm .sw-halo { opacity: .6; } }
+
+/* Легенда и подсказка */
+.sw-legend { position: absolute; left: 12px; bottom: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 11px; color: var(--ink-2); box-shadow: var(--shadow); max-width: 300px; pointer-events: none; }
+.sw-lg-title { font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+.sw-lg-bar { height: 8px; border-radius: 4px; }
+.sw-lg-lab { display: flex; justify-content: space-between; margin-top: 3px; font-family: var(--mono); }
+.sw-lg-note { margin-top: 4px; color: var(--muted); }
+.sw-lg-keys { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--grid); }
+.sw-lg-keys span { display: inline-flex; align-items: center; gap: 5px; }
+.sw-k { width: 11px; height: 11px; display: inline-block; border: 1.5px solid var(--ink-2); border-radius: 2px; background: var(--div-mid); }
+.sw-k-well { border-radius: 50%; background: var(--blue); border-color: var(--ink); }
+.sw-k-read { border: 2px solid var(--ink); }
+.sw-k-alarm { border: 2px solid var(--critical); box-shadow: 0 0 0 2px color-mix(in srgb, var(--critical) 30%, transparent); }
+.sw-k-off { background: none; border-style: dashed; }
+.sw-tip, .sw-chart-tip { position: absolute; z-index: 5; background: var(--ink); color: var(--surface); padding: 8px 10px; border-radius: 6px; font-size: 12px; line-height: 1.4; max-width: 260px; pointer-events: none; box-shadow: var(--shadow); }
+.sw-tip em, .sw-chart-tip em { color: var(--axis); font-style: normal; }
+
+/* ---------- Профиль ---------- */
+.sw-profile { position: relative; display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 0 18px; padding: 10px 14px 12px; border-top: 1px solid var(--border); background: var(--surface); }
+.sw-profile-title { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 12px; padding: 4px 0 2px; }
+.sw-profile-name { font-weight: 600; }
+.sw-profile-meta { color: var(--muted); }
+.sw-profile-svg { width: 100%; display: block; }
+.sw-norm-band { fill: var(--blue); opacity: .08; }
+.sw-grid { stroke: var(--grid); stroke-width: 1; }
+.sw-axis { stroke: var(--axis); stroke-width: 1; }
+.sw-tick { font: 10px var(--mono); fill: var(--muted); }
+.sw-model-line { fill: none; stroke: var(--blue); stroke-width: 2; stroke-linejoin: round; }
+.sw-stem { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 2 2; }
+.sw-reading-dot { stroke: var(--surface); stroke-width: 2; }
+.sw-st-alarm .sw-reading-dot { stroke: var(--critical); }
+.sw-hit { fill: transparent; cursor: pointer; }
+.sw-cross { stroke: var(--axis); stroke-width: 1; stroke-dasharray: 3 3; pointer-events: none; }
+.sw-cross-dot { fill: var(--surface); stroke: var(--blue); stroke-width: 2; pointer-events: none; }
+.sw-nosupply { font: 600 11px var(--font); fill: var(--critical); }
+
+/* ---------- Боковая панель ---------- */
+.sw-tabs { display: flex; border-bottom: 1px solid var(--border); }
+.sw-tabs button { flex: 1; font: inherit; font-size: 13px; padding: 11px 6px; background: none; border: 0; border-bottom: 2px solid transparent; color: var(--ink-2); cursor: pointer; }
+.sw-tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); font-weight: 500; }
+.sw-panel { padding: 16px; overflow: auto; }
+.sw-lead { margin: 0 0 12px; color: var(--ink-2); }
+.sw-hint { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
+.sw-form { display: flex; flex-direction: column; gap: 12px; }
+.sw-form label, .sw-panel > label, .sw-range { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--ink-2); font-weight: 500; }
+.sw-opt { font-weight: 400; color: var(--muted); }
+.sw-form input, .sw-panel select { font: inherit; font-size: 15px; padding: 8px 10px; border: 1px solid var(--axis); border-radius: 6px; background: var(--surface); color: var(--ink); }
+.sw-form input[name=pressure] { font-family: var(--mono); }
+.sw-form-msg { font-size: 13px; min-height: 1em; }
+.sw-form-msg.is-ok { color: var(--good-text); }
+.sw-form-msg.is-err { color: var(--critical); }
+.sw-howto { font-size: 12px; color: var(--ink-2); }
+.sw-howto summary { cursor: pointer; color: var(--muted); }
+.sw-howto ul { padding-left: 18px; margin: 6px 0 0; }
+.sw-log-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-2); margin-bottom: 8px; }
+.sw-log-actions { display: flex; gap: 4px; }
+.sw-table-wrap { overflow-x: auto; }
+.sw-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.sw-table th { text-align: left; font-weight: 500; color: var(--muted); font-size: 11px; padding: 6px 6px; border-bottom: 1px solid var(--grid); }
+.sw-table th.num, .sw-table td.num { text-align: right; }
+.sw-table td { padding: 6px 6px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+.sw-table tr[data-house] { cursor: pointer; }
+.sw-table tr.is-selected td { background: var(--surface-2); }
+.sw-table tr.is-old { opacity: .5; }
+.sw-dim { color: var(--muted); }
+.sw-comment { font-size: 11px; color: var(--muted); }
+.sw-empty { color: var(--muted); padding: 18px 6px; }
+.sw-tag { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); border: 1px solid var(--grid); border-radius: 3px; padding: 0 4px; }
+.sw-chip { display: inline-block; padding: 1px 6px; border-radius: 4px; font-family: var(--mono); }
+.sw-chip-ok { background: color-mix(in srgb, var(--good) 15%, transparent); color: var(--good-text); }
+.sw-chip-warn { background: color-mix(in srgb, var(--warning) 25%, transparent); color: var(--ink); }
+.sw-chip-alarm { background: var(--critical); color: #fff; }
+.sw-x { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 12px; padding: 0 3px; }
+.sw-x:hover { color: var(--critical); }
+.sw-well-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--grid); }
+.sw-well-row .sw-range { grid-column: 1 / -1; }
+.sw-well-q { font-size: 12px; color: var(--ink-2); }
+.sw-switch { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 4px 0; cursor: pointer; }
+.sw-switch input { accent-color: var(--blue); width: 16px; height: 16px; margin: 0; }
+.sw-switch small { color: var(--muted); }
+.sw-range input[type=range] { width: 100%; accent-color: var(--blue); margin: 0; }
+.sw-range output { color: var(--ink); }
+.sw-panel .sw-btn.sw-ghost { margin-top: 14px; align-self: flex-start; }
+.sw-diag-item { display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--grid); }
+.sw-diag-ic { flex: 0 0 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; background: var(--axis); }
+.sw-lvl-critical .sw-diag-ic { background: var(--critical); }
+.sw-lvl-serious .sw-diag-ic { background: var(--serious); }
+.sw-lvl-warning .sw-diag-ic { background: var(--warning); color: var(--ink); }
+.sw-lvl-good .sw-diag-ic { background: var(--good); }
+.sw-diag-t { font-weight: 500; }
+.sw-diag-d { font-size: 12px; color: var(--ink-2); margin-top: 2px; }
+.sw-toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--ink); color: var(--surface); padding: 9px 14px; border-radius: 8px; font-size: 13px; box-shadow: var(--shadow); z-index: 20; }
+
+</style>
+<div id="water-scheme"></div>
+<script>
+/* ============================================================
+ *  Стрижи · Водоснабжение — модель посёлка
+ *  Все размеры — в метрах, давление — в барах, расход — в л/с.
+ *  Файл описывает демонстрационную сеть; для реального посёлка
+ *  подставьте свои координаты, диаметры, длины и адреса.
+ * ============================================================ */
+window.SW = window.SW || {};
+
+SW.defaultConfig = {
+  title: 'Водоснабжение посёлка Стрижи',
+
+  /* Нормативный диапазон давления у потребителя, бар */
+  norm: { min: 2.0, max: 4.5 },
+
+  /* Допустимое расхождение «показание жителя − расчёт», бар */
+  deviation: { ok: 0.3, warn: 0.7 },
+
+  /* Показание жителя считается актуальным столько часов */
+  readingTtlHours: 12,
+
+  /* Суточный профиль водоразбора (доля от пикового) по часам 0..23 */
+  hourProfile: [0.15,0.10,0.08,0.08,0.10,0.25,0.60,1.00,0.95,0.70,0.55,0.50,
+                0.50,0.45,0.45,0.50,0.60,0.80,1.05,1.20,1.15,0.90,0.55,0.30],
+
+  /* Пиковый расход одного домовладения с учётом одновременности, л/с */
+  houseDemand: 0.12,
+
+  /* Материал труб → коэффициент Хазена-Вильямса */
+  materials: { 'ПЭ': 145, 'ПНД': 145, 'сталь': 110, 'чугун': 95, 'ПВХ': 145 },
+
+  /* Наружный диаметр → внутренний (SDR17 ПЭ), мм */
+  innerDiameter: { 160: 141, 110: 96.8, 90: 79.2, 63: 55.4, 50: 44, 40: 35.2, 32: 28, 25: 21 },
+
+  /* Подложка — план посёлка (необязательно): url картинки и её положение
+   * в координатах схемы (метры). Позволяет расставить дома по реальному плану.
+   * background: { url: 'plan.png', x: -100, y: -50, width: 1200, height: 600, opacity: 0.5 } */
+  background: null,
+
+  /* Скважины: координаты, отметка земли z, давление на выходе P0 (бар),
+   * curveK — снижение напора насоса с расходом, м / (л/с)² */
+  wells: [
+    { id: 'W1', name: 'Скважина №1', x: -80,  y: 120, z: 3.0, pressure: 4.0, curveK: 0.04, connectTo: 'A0',  pipe: { d: 110, length: 45, material: 'ПЭ' } },
+    { id: 'W2', name: 'Скважина №2', x: 1040, y: 420, z: 5.5, pressure: 3.8, curveK: 0.04, connectTo: 'B24', pipe: { d: 110, length: 45, material: 'ПЭ' } },
+    { id: 'W3', name: 'Скважина №3', x: 480,  y: 270, z: 4.0, pressure: 4.0, curveK: 0.06, connectTo: ['A12', 'B12'], pipe: { d: 90, length: 150, material: 'ПЭ' } },
+  ],
+
+  /* Улицы: магистраль идёт вдоль оси y, узлы через step метров.
+   * sides — смещение домов от оси (минус — верхняя сторона, плюс — нижняя).
+   * numbering: нечётные дома на верхней стороне, чётные — на нижней. */
+  streets: [
+    { id: 'A', name: 'ул. Сиреневая', y: 120, x0: 0, x1: 960, step: 40,
+      main: { d: 110, material: 'ПЭ' }, branch: { d: 32, material: 'ПЭ', length: 22 },
+      sides: [-55, 55], skipSlots: [3, 14, 21, 38, 47], elevation: [3.0, 9.5] },
+    { id: 'B', name: 'ул. Вишнёвая',     y: 420, x0: 0, x1: 960, step: 40,
+      main: { d: 90, material: 'ПЭ' },  branch: { d: 32, material: 'ПЭ', length: 22 },
+      sides: [-55, 55], skipSlots: [0, 9, 26, 33, 44], elevation: [4.0, 6.0] },
+  ],
+
+  /* Перемычки между улицами. valve: true — можно закрыть в сценариях */
+  links: [
+    { id: 'L-end', name: 'Перемычка (восток)', from: 'A24', to: 'B24', d: 63, material: 'ПЭ', length: 300, valve: true, open: true },
+  ],
+};
+
+/* Детерминированный генератор для мелкого «шума» отметок земли */
+SW.seeded = function (seed) {
+  let a = seed >>> 0;
+  return function () {
+    a += 0x6D2B79F5;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+};
+
+/* ------------------------------------------------------------
+ *  buildNetwork(config) → { nodes, pipes, houses, wells, streets }
+ *  node: { id, type: 'well'|'junction'|'house', x, y, z, label, address,
+ *          street, side, demand(л/с при пике), well? }
+ *  pipe: { id, from, to, length, d, dInner, C, kind: 'main'|'branch'|'well'|'link',
+ *          street?, closed }
+ * ------------------------------------------------------------ */
+SW.buildNetwork = function (cfg) {
+  cfg = cfg || SW.defaultConfig;
+  const rnd = SW.seeded(20260906);
+  const nodes = [], pipes = [], houses = [], wells = [], streets = [];
+  const byId = new Map();
+  const add = (n) => { byId.set(n.id, n); nodes.push(n); return n; };
+  const inner = (d) => cfg.innerDiameter[d] || d * 0.88;
+  const cval = (m) => cfg.materials[m] || 140;
+
+  cfg.streets.forEach((s) => {
+    const n = Math.round((s.x1 - s.x0) / s.step);
+    const junctions = [];
+    const streetHouses = [];
+    let odd = 1, even = 2;
+    for (let i = 0; i <= n; i++) {
+      const x = s.x0 + i * s.step;
+      const t = (x - s.x0) / (s.x1 - s.x0);
+      const z = s.elevation[0] + (s.elevation[1] - s.elevation[0]) * t + (rnd() - 0.5) * 0.8;
+      const j = add({ id: `${s.id}${i}`, type: 'junction', x, y: s.y, z, street: s.id, dist: x - s.x0, demand: 0 });
+      junctions.push(j);
+      if (i > 0) {
+        pipes.push({ id: `${s.id}m${i}`, from: `${s.id}${i - 1}`, to: `${s.id}${i}`, length: s.step,
+          d: s.main.d, dInner: inner(s.main.d), C: cval(s.main.material), material: s.main.material,
+          kind: 'main', street: s.id, closed: false });
+      }
+      s.sides.forEach((dy, sideIdx) => {
+        const slot = i * 2 + sideIdx;
+        if ((s.skipSlots || []).includes(slot)) return;
+        const num = sideIdx === 0 ? odd : even;
+        if (sideIdx === 0) odd += 2; else even += 2;
+        const hid = `${s.id}h${num}`;
+        const hz = z + (rnd() - 0.5) * 0.6 + (dy < 0 ? 0.3 : -0.2);
+        const h = add({ id: hid, type: 'house', x, y: s.y + dy, z: hz, street: s.id, side: sideIdx,
+          number: num, address: `${s.name}, ${num}`, junction: j.id, dist: x - s.x0,
+          demand: cfg.houseDemand });
+        houses.push(h); streetHouses.push(h);
+        pipes.push({ id: `${hid}p`, from: j.id, to: hid, length: s.branch.length,
+          d: s.branch.d, dInner: inner(s.branch.d), C: cval(s.branch.material), material: s.branch.material,
+          kind: 'branch', street: s.id, closed: false });
+      });
+    }
+    streets.push({ id: s.id, name: s.name, y: s.y, x0: s.x0, x1: s.x1, junctions, houses: streetHouses, main: s.main });
+  });
+
+  cfg.wells.forEach((w) => {
+    const node = add({ id: w.id, type: 'well', x: w.x, y: w.y, z: w.z, label: w.name, name: w.name,
+      pressure: w.pressure, curveK: w.curveK || 0, demand: 0, on: true });
+    wells.push(node);
+    const targets = Array.isArray(w.connectTo) ? w.connectTo : [w.connectTo];
+    targets.forEach((tid, k) => {
+      pipes.push({ id: `${w.id}p${k}`, from: w.id, to: tid, length: w.pipe.length,
+        d: w.pipe.d, dInner: inner(w.pipe.d), C: cval(w.pipe.material), material: w.pipe.material,
+        kind: 'well', closed: false });
+    });
+  });
+
+  (cfg.links || []).forEach((l) => {
+    pipes.push({ id: l.id, from: l.from, to: l.to, length: l.length, d: l.d, dInner: inner(l.d),
+      C: cval(l.material), material: l.material, kind: 'link', name: l.name, valve: !!l.valve,
+      closed: l.open === false });
+  });
+
+  const pipeById = new Map(pipes.map((p) => [p.id, p]));
+  return { cfg, nodes, pipes, houses, wells, streets, byId, pipeById };
+};
+
+/* ============================================================
+ *  Гидравлический расчёт сети (установившийся режим)
+ *  Потери напора — формула Хазена-Вильямса:
+ *      h = 10.67 · L · Q^1.852 / (C^1.852 · D^4.87)   [м, Q в м³/с, D в м]
+ *  Решение — метод линеаризации сопротивлений (linear theory):
+ *  на каждой итерации h ≈ K·Q, K = r·|Q|^0.852, затем решается
+ *  линейная система узловых балансов. Работает и для колец,
+ *  и для нескольких источников с фиксированным напором.
+ * ============================================================ */
+window.SW = window.SW || {};
+
+SW.hydraulics = (function () {
+  const BAR_M = 10.197;          // метров водяного столба в 1 баре
+  const N_HW = 1.852;
+
+  function resistance(pipe) {
+    const D = pipe.dInner / 1000;
+    return 10.67 * pipe.length / (Math.pow(pipe.C, N_HW) * Math.pow(D, 4.87));
+  }
+
+  function headloss(pipe, Q) {           // Q м³/с, знак сохраняется
+    return Math.sign(Q) * resistance(pipe) * Math.pow(Math.abs(Q), N_HW);
+  }
+
+  /* Решение плотной СЛАУ методом Гаусса с выбором главного элемента */
+  function solveLinear(A, b) {
+    const n = b.length;
+    const M = A.map((row, i) => row.concat([b[i]]));
+    for (let c = 0; c < n; c++) {
+      let piv = c;
+      for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[piv][c])) piv = r;
+      if (Math.abs(M[piv][c]) < 1e-14) { M[piv][c] = 1; M[piv][n] = 0; }
+      if (piv !== c) { const t = M[c]; M[c] = M[piv]; M[piv] = t; }
+      const p = M[c][c];
+      for (let r = c + 1; r < n; r++) {
+        const f = M[r][c] / p;
+        if (f === 0) continue;
+        for (let k = c; k <= n; k++) M[r][k] -= f * M[c][k];
+      }
+    }
+    const x = new Array(n).fill(0);
+    for (let r = n - 1; r >= 0; r--) {
+      let s = M[r][n];
+      for (let k = r + 1; k < n; k++) s -= M[r][k] * x[k];
+      x[r] = s / M[r][r];
+    }
+    return x;
+  }
+
+  /* Доля пикового расхода в момент hour (дробный час) */
+  function hourFactor(profile, hour) {
+    const h = ((hour % 24) + 24) % 24;
+    const i = Math.floor(h), f = h - i;
+    return profile[i] * (1 - f) + profile[(i + 1) % 24] * f;
+  }
+
+  /**
+   * solve(net, opts)
+   *   opts.hour            — час суток (0..24, дробный)
+   *   opts.demandScale     — множитель водоразбора (1 — обычный день)
+   *   opts.wellState[id]   — { on, pressure } переопределения скважин
+   *   opts.closedPipes     — Set id закрытых труб
+   *   opts.extraDemand[id] — дополнительный отбор в узле, л/с (утечка/полив)
+   * → { head, pressure, flow, velocity, noSupply, wellFlow, factor }
+   */
+  function solve(net, opts) {
+    opts = opts || {};
+    const factor = hourFactor(net.cfg.hourProfile, opts.hour == null ? 8 : opts.hour) * (opts.demandScale || 1);
+    const closed = opts.closedPipes || new Set();
+    const wellState = opts.wellState || {};
+    const extra = opts.extraDemand || {};
+
+    const pipes = net.pipes.filter((p) => !p.closed && !closed.has(p.id));
+    const activeWells = new Set();
+    net.wells.forEach((w) => { const st = wellState[w.id] || {}; if (st.on !== false && w.on !== false) activeWells.add(w.id); });
+
+    // Обратные клапаны: скважина, в которую вода «затекает» из сети,
+    // фактически отключается — исключаем её и пересчитываем.
+    for (let guard = 0; guard <= net.wells.length; guard++) {
+      const res = solveOnce(net, pipes, activeWells, wellState, extra, factor);
+      let worst = null;
+      res.wellFlow.forEach((q, id) => { if (activeWells.has(id) && q < -1e-3 && (!worst || q < res.wellFlow.get(worst))) worst = id; });
+      if (!worst) { res.checkValveClosed = new Set(net.wells.filter((w) => { const st = wellState[w.id] || {}; return st.on !== false && w.on !== false && !activeWells.has(w.id); }).map((w) => w.id)); return res; }
+      activeWells.delete(worst);
+    }
+  }
+
+  function solveOnce(net, pipes, activeWells, wellState, extra, factor) {
+
+    // Расход в узлах, м³/с
+    const demand = new Map();
+    net.nodes.forEach((n) => demand.set(n.id, ((n.demand || 0) * factor + (extra[n.id] || 0)) / 1000));
+
+    // Степень узлов и последовательное «сворачивание» листьев
+    const deg = new Map(); const adj = new Map();
+    net.nodes.forEach((n) => { deg.set(n.id, 0); adj.set(n.id, []); });
+    pipes.forEach((p) => { deg.set(p.from, deg.get(p.from) + 1); deg.set(p.to, deg.get(p.to) + 1); adj.get(p.from).push(p); adj.get(p.to).push(p); });
+
+    const removedNode = new Set(), removedPipe = new Set(), leaves = [];
+    const agg = new Map(demand);
+    const queue = net.nodes.filter((n) => n.type !== 'well' && deg.get(n.id) === 1).map((n) => n.id);
+    while (queue.length) {
+      const id = queue.pop();
+      if (removedNode.has(id) || deg.get(id) !== 1) continue;
+      const p = adj.get(id).find((q) => !removedPipe.has(q.id));
+      if (!p) continue;
+      const other = p.from === id ? p.to : p.from;
+      leaves.push({ id, pipe: p, other });
+      removedNode.add(id); removedPipe.add(p.id);
+      agg.set(other, agg.get(other) + agg.get(id));
+      deg.set(other, deg.get(other) - 1);
+      if (net.byId.get(other).type !== 'well' && deg.get(other) === 1) queue.push(other);
+    }
+
+    // Узлы редуцированной системы
+    const core = net.nodes.filter((n) => !removedNode.has(n.id));
+    const corePipes = pipes.filter((p) => !removedPipe.has(p.id));
+    const unknown = core.filter((n) => !(n.type === 'well' && activeWells.has(n.id)) && deg.get(n.id) > 0);
+    const idx = new Map(unknown.map((n, i) => [n.id, i]));
+    const head = new Map();
+    const wellHead0 = new Map();
+    net.wells.forEach((w) => {
+      const st = wellState[w.id] || {};
+      const P = st.pressure != null ? st.pressure : w.pressure;
+      wellHead0.set(w.id, w.z + P * BAR_M);
+      if (activeWells.has(w.id)) head.set(w.id, wellHead0.get(w.id));
+    });
+
+    const r = corePipes.map(resistance);
+    let totalDemand = 0; demand.forEach((q) => { totalDemand += q; });
+    let Q = corePipes.map(() => 0.002);
+    const n = unknown.length;
+    let converged = false;
+
+    for (let iter = 0; iter < 60 && !converged; iter++) {
+      const K = corePipes.map((p, i) => r[i] * Math.pow(Math.max(Math.abs(Q[i]), 2e-5), N_HW - 1));
+      const A = Array.from({ length: n }, () => new Array(n).fill(0));
+      const b = new Array(n).fill(0);
+      unknown.forEach((u, j) => { b[j] = -agg.get(u.id); });
+      corePipes.forEach((p, i) => {
+        const g = 1 / K[i];
+        const a = idx.get(p.from), c = idx.get(p.to);
+        if (a != null) { A[a][a] += g; if (c != null) A[a][c] -= g; else b[a] += g * head.get(p.to); }
+        if (c != null) { A[c][c] += g; if (a != null) A[c][a] -= g; else b[c] += g * head.get(p.from); }
+      });
+      const H = n ? solveLinear(A, b) : [];
+      unknown.forEach((u, j) => head.set(u.id, H[j]));
+      let maxChange = 0;
+      const Qn = corePipes.map((p, i) => {
+        const q = (head.get(p.from) - head.get(p.to)) / K[i];
+        const mixed = 0.5 * (q + Q[i]);
+        maxChange = Math.max(maxChange, Math.abs(mixed - Q[i]));
+        return mixed;
+      });
+      Q = Qn;
+      // Характеристика насоса: напор падает с расходом
+      net.wells.forEach((w) => {
+        if (!activeWells.has(w.id) || !w.curveK) return;
+        let q = 0;
+        corePipes.forEach((p, i) => { if (p.from === w.id) q += Q[i]; else if (p.to === w.id) q -= Q[i]; });
+        const qls = Math.max(q, 0) * 1000;
+        head.set(w.id, 0.5 * head.get(w.id) + 0.5 * (wellHead0.get(w.id) - w.curveK * qls * qls));
+      });
+      if (iter > 3 && maxChange < Math.max(1e-6, 1e-4 * totalDemand)) converged = true;
+    }
+
+    // Результаты по трубам ядра
+    const flow = new Map(), velocity = new Map();
+    corePipes.forEach((p, i) => { flow.set(p.id, Q[i]); });
+
+    // Обратная подстановка листьев
+    for (let i = leaves.length - 1; i >= 0; i--) {
+      const { id, pipe, other } = leaves[i];
+      const q = agg.get(id);
+      const Hother = head.get(other);
+      if (Hother == null) { continue; }
+      head.set(id, Hother - headloss(pipe, q));
+      flow.set(pipe.id, pipe.from === other ? q : -q);
+    }
+
+    net.pipes.forEach((p) => {
+      const q = flow.get(p.id);
+      if (q == null) { flow.set(p.id, 0); velocity.set(p.id, 0); return; }
+      const area = Math.PI * Math.pow(p.dInner / 2000, 2);
+      velocity.set(p.id, q / area);
+    });
+
+    // Давление в узлах; узлы без напора — «нет подачи»
+    const pressure = new Map(), noSupply = new Set();
+    net.nodes.forEach((nd) => {
+      const H = head.get(nd.id);
+      if (H == null || !isFinite(H)) { noSupply.add(nd.id); pressure.set(nd.id, null); return; }
+      const P = (H - nd.z) / BAR_M;
+      if (nd.type !== 'well' && P < 0.05) noSupply.add(nd.id);
+      pressure.set(nd.id, P);
+    });
+
+    const wellFlow = new Map();
+    net.wells.forEach((w) => {
+      let q = 0;
+      net.pipes.forEach((p) => { const f = flow.get(p.id) || 0; if (p.from === w.id) q += f; else if (p.to === w.id) q -= f; });
+      wellFlow.set(w.id, activeWells.has(w.id) ? q * 1000 : 0);
+    });
+
+    return { head, pressure, flow, velocity, noSupply, wellFlow, factor, converged, activeWells };
+  }
+
+  return { BAR_M, resistance, headloss, hourFactor, solve };
+})();
+
+/* ============================================================
+ *  Хранилище показаний жителей
+ *  mode: 'local' — localStorage браузера (по умолчанию)
+ *        'api'   — REST: GET/POST {apiUrl}, DELETE {apiUrl}/{id}
+ *  При недоступности API данные кэшируются локально.
+ * ============================================================ */
+window.SW = window.SW || {};
+
+SW.reports = (function () {
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+  function create(opts) {
+    opts = opts || {};
+    const key = opts.key || 'strizhi.water.readings.v1';
+    const mode = opts.apiUrl ? 'api' : 'local';
+    const listeners = new Set();
+    let cache = readLocal();
+
+    function readLocal() {
+      try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : []; } catch (e) { return []; }
+    }
+    function writeLocal() {
+      try { localStorage.setItem(key, JSON.stringify(cache)); } catch (e) { /* приватный режим и т.п. */ }
+    }
+    function emit() { listeners.forEach((fn) => { try { fn(cache.slice()); } catch (e) { console.error(e); } }); }
+
+    async function api(method, path, body) {
+      const res = await fetch(opts.apiUrl + (path || ''), {
+        method, headers: { 'Content-Type': 'application/json' },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      if (!res.ok) throw new Error('API ' + res.status);
+      return res.status === 204 ? null : res.json();
+    }
+
+    const store = {
+      mode,
+      list() { return cache.slice(); },
+      async refresh() {
+        if (mode === 'api') {
+          try { cache = await api('GET'); writeLocal(); } catch (e) { console.warn('Показания: API недоступен, используем локальную копию', e); }
+        } else cache = readLocal();
+        emit();
+        return cache.slice();
+      },
+      async add(r) {
+        const reading = Object.assign({ id: uid(), ts: Date.now() }, r);
+        cache = [reading].concat(cache);
+        writeLocal(); emit();
+        if (mode === 'api') { try { await api('POST', '', reading); } catch (e) { console.warn('Показание не отправлено на сервер', e); } }
+        return reading;
+      },
+      async remove(id) {
+        cache = cache.filter((r) => r.id !== id);
+        writeLocal(); emit();
+        if (mode === 'api') { try { await api('DELETE', '/' + encodeURIComponent(id)); } catch (e) { console.warn(e); } }
+      },
+      async clear(filter) {
+        const gone = filter ? cache.filter(filter) : cache.slice();
+        cache = filter ? cache.filter((r) => !filter(r)) : [];
+        writeLocal(); emit();
+        if (mode === 'api') { for (const r of gone) { try { await api('DELETE', '/' + encodeURIComponent(r.id)); } catch (e) { /* ignore */ } } }
+      },
+      onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+    };
+    return store;
+  }
+
+  return { create };
+})();
+
+/* ============================================================
+ *  Цветовые шкалы и SVG-схема сети с анимацией потока
+ * ============================================================ */
+window.SW = window.SW || {};
+
+/* ---------- Цвета: OKLab-интерполяция между полюсами ---------- */
+SW.colors = (function () {
+  const hex2rgb = (h) => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => v / 255); };
+  const lin = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+  const gam = (c) => (c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055);
+  function toLab(hex) {
+    const [r, g, b] = hex2rgb(hex).map(lin);
+    const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+    const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+    const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+    return [0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s, 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s, 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s];
+  }
+  function fromLab([L, a, b]) {
+    const l = Math.pow(L + 0.3963377774 * a + 0.2158037573 * b, 3);
+    const m = Math.pow(L - 0.1055613458 * a - 0.0638541728 * b, 3);
+    const s = Math.pow(L - 0.0894841775 * a - 1.291485548 * b, 3);
+    const rgb = [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s, -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s];
+    return '#' + rgb.map((c) => Math.round(Math.max(0, Math.min(1, gam(c))) * 255).toString(16).padStart(2, '0')).join('');
+  }
+  const cache = new Map();
+  function mix(a, b, t) {
+    const k = a + b + Math.round(t * 200);
+    if (cache.has(k)) return cache.get(k);
+    const A = toLab(a), B = toLab(b);
+    const v = fromLab([A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t]);
+    cache.set(k, v); return v;
+  }
+  let theme = { mid: '#f0efec', blue: '#2a78d6', red: '#e34948', seqLo: '#cde2fb', seqHi: '#0d366b', neutral: '#c3c2b7' };
+  return {
+    status: { good: '#0ca30c', warning: '#fab219', serious: '#ec835a', critical: '#d03b3b' },
+    setTheme(t) { theme = Object.assign({}, theme, t); },
+    theme() { return theme; },
+    /* t ∈ [-1, 1]: −1 — красный (ниже), 0 — нейтраль, +1 — синий (выше) */
+    diverging(t) { t = Math.max(-1, Math.min(1, t || 0)); return t < 0 ? mix(theme.mid, theme.red, -t) : mix(theme.mid, theme.blue, t); },
+    /* t ∈ [0, 1] — один тон, светлый → тёмный */
+    sequential(t) { return mix(theme.seqLo, theme.seqHi, Math.max(0, Math.min(1, t || 0))); },
+    /* Состояние по абсолютному давлению */
+    statusFor(P, norm) {
+      if (P == null) return 'none';
+      if (P < norm.min - 0.7 || P > norm.max + 1.2) return 'critical';
+      if (P < norm.min || P > norm.max) return 'serious';
+      if (P < norm.min + 0.3 || P > norm.max - 0.3) return 'warning';
+      return 'good';
+    },
+    /* Состояние отклонения показания от расчёта */
+    deviationStatus(delta, dev) {
+      const a = Math.abs(delta);
+      return a <= dev.ok ? 'ok' : a <= dev.warn ? 'warn' : 'alarm';
+    },
+  };
+})();
+
+/* ---------- Схема ---------- */
+SW.scheme = (function () {
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (tag, attrs, parent) => {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) if (attrs[k] != null) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  };
+  const pipeWidth = (p) => 1.2 + p.d / 24;
+
+  function create(host, net, handlers) {
+    handlers = handlers || {};
+    const svg = el('svg', { class: 'sw-svg', role: 'img', 'aria-label': 'Схема водоснабжения' }, host);
+    const defs = el('defs', {}, svg);
+    const marker = el('marker', { id: 'sw-arrow', viewBox: '0 0 10 10', refX: 5, refY: 5, markerWidth: 4, markerHeight: 4, orient: 'auto' }, defs);
+    el('path', { d: 'M0,0 L10,5 L0,10 z', class: 'sw-arrowhead' }, marker);
+
+    const gBack = el('g', { class: 'sw-back' }, svg);
+    if (net.cfg.background && net.cfg.background.url) {
+      const bg = net.cfg.background;
+      const img = el('image', { href: bg.url, x: bg.x || 0, y: bg.y || 0, width: bg.width, height: bg.height, preserveAspectRatio: 'none', class: 'sw-back-img' }, gBack);
+      img.style.opacity = bg.opacity == null ? 0.5 : bg.opacity;
+    }
+    const gStreets = el('g', { class: 'sw-streets' }, svg);
+    const gPipes = el('g', { class: 'sw-pipes' }, svg);
+    const gFlow = el('g', { class: 'sw-flow' }, svg);
+    const gNodes = el('g', { class: 'sw-nodes' }, svg);
+    const gLabels = el('g', { class: 'sw-labels' }, svg);
+
+    // Границы
+    const xs = net.nodes.map((n) => n.x), ys = net.nodes.map((n) => n.y);
+    const pad = 70;
+    const bg = net.cfg.background;
+    if (bg && bg.url) { xs.push(bg.x || 0, (bg.x || 0) + bg.width); ys.push(bg.y || 0, (bg.y || 0) + bg.height); }
+    const bounds = { x: Math.min(...xs) - pad, y: Math.min(...ys) - pad - 10, w: Math.max(...xs) - Math.min(...xs) + pad * 2, h: Math.max(...ys) - Math.min(...ys) + pad * 2 + 10 };
+    let view = Object.assign({}, bounds);
+    const applyView = () => svg.setAttribute('viewBox', `${view.x} ${view.y} ${view.w} ${view.h}`);
+    applyView();
+
+    // Подложка улиц
+    net.streets.forEach((s) => {
+      el('rect', { x: s.x0 - 30, y: s.y - 14, width: s.x1 - s.x0 + 60, height: 28, rx: 14, class: 'sw-road' }, gStreets);
+      el('text', { x: s.x0 - 20, y: s.y - 82, class: 'sw-street-name' }, gLabels).textContent = s.name;
+    });
+
+    // Трубы
+    const pipeEls = new Map();
+    net.pipes.forEach((p) => {
+      const a = net.byId.get(p.from), b = net.byId.get(p.to);
+      const w = pipeWidth(p);
+      const base = el('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, class: `sw-pipe sw-pipe-${p.kind}`, 'stroke-width': w, 'data-id': p.id }, gPipes);
+      const flow = el('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, class: 'sw-flowline', 'stroke-width': Math.max(0.8, w * 0.42) }, gFlow);
+      let valve = null;
+      if (p.valve) {
+        const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+        valve = el('g', { class: 'sw-valve', transform: `translate(${mx} ${my})` }, gNodes);
+        el('path', { d: 'M-7,-6 L7,6 L7,-6 L-7,6 Z', class: 'sw-valve-body' }, valve);
+        valve.addEventListener('click', (e) => { e.stopPropagation(); handlers.onValveClick && handlers.onValveClick(p); });
+      }
+      base.addEventListener('pointerenter', (e) => handlers.onHover && handlers.onHover({ kind: 'pipe', pipe: p }, e));
+      base.addEventListener('pointerleave', () => handlers.onHover && handlers.onHover(null));
+      pipeEls.set(p.id, { base, flow, valve, len: Math.hypot(b.x - a.x, b.y - a.y) });
+    });
+
+    // Узлы
+    const nodeEls = new Map();
+    net.nodes.forEach((n) => {
+      if (n.type === 'junction') {
+        nodeEls.set(n.id, { dot: el('circle', { cx: n.x, cy: n.y, r: 2.2, class: 'sw-junction' }, gNodes) });
+        return;
+      }
+      const g = el('g', { class: `sw-node sw-${n.type}`, transform: `translate(${n.x} ${n.y})`, 'data-id': n.id, tabindex: 0, role: 'button' }, gNodes);
+      let shape, halo, ring, badge;
+      if (n.type === 'well') {
+        halo = el('circle', { r: 26, class: 'sw-halo' }, g);
+        shape = el('path', { d: 'M0,-19 L16.5,-9.5 L16.5,9.5 L0,19 L-16.5,9.5 L-16.5,-9.5 Z', class: 'sw-well-body' }, g);
+        el('path', { d: 'M0,-9 C4,-3 6,0 6,3 A6,6 0 1,1 -6,3 C-6,0 -4,-3 0,-9 Z', class: 'sw-well-drop' }, g);
+        el('text', { x: 0, y: n.y < 300 ? -30 : 38, class: 'sw-well-name' }, g).textContent = n.name;
+        badge = el('text', { x: 0, y: n.y < 300 ? 52 : -36, class: 'sw-well-badge' }, g);
+      } else {
+        halo = el('circle', { r: 16, class: 'sw-halo' }, g);
+        ring = el('rect', { x: -10, y: -10, width: 20, height: 20, rx: 4, class: 'sw-house-ring' }, g);
+        shape = el('rect', { x: -7.5, y: -7.5, width: 15, height: 15, rx: 2.5, class: 'sw-house-body' }, g);
+        el('text', { x: 0, y: n.side === 0 ? -14 : 20, class: 'sw-house-num' }, g).textContent = n.number;
+        badge = el('text', { x: 0, y: 3.2, class: 'sw-house-badge' }, g);
+      }
+      g.addEventListener('click', (e) => { e.stopPropagation(); handlers.onNodeClick && handlers.onNodeClick(n); });
+      g.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handlers.onNodeClick && handlers.onNodeClick(n); } });
+      g.addEventListener('pointerenter', (e) => handlers.onHover && handlers.onHover({ kind: 'node', node: n }, e));
+      g.addEventListener('pointerleave', () => handlers.onHover && handlers.onHover(null));
+      nodeEls.set(n.id, { g, shape, halo, ring, badge });
+    });
+
+    /* ---- Панорамирование и масштаб ---- */
+    let drag = null;
+    const toWorld = (cx, cy) => { const r = svg.getBoundingClientRect(); return [view.x + (cx - r.left) / r.width * view.w, view.y + (cy - r.top) / r.height * view.h]; };
+    svg.addEventListener('pointerdown', (e) => { if (e.button !== 0) return; drag = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, moved: false }; svg.setPointerCapture(e.pointerId); });
+    svg.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      const r = svg.getBoundingClientRect();
+      const dx = (e.clientX - drag.x) / r.width * view.w, dy = (e.clientY - drag.y) / r.height * view.h;
+      if (Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) > 3) drag.moved = true;
+      view.x = drag.vx - dx; view.y = drag.vy - dy; applyView();
+    });
+    const endDrag = () => { if (drag && !drag.moved) handlers.onBackgroundClick && handlers.onBackgroundClick(); drag = null; };
+    svg.addEventListener('pointerup', endDrag); svg.addEventListener('pointercancel', endDrag);
+    svg.addEventListener('wheel', (e) => { e.preventDefault(); zoomAt(e.deltaY < 0 ? 1 / 1.15 : 1.15, e.clientX, e.clientY); }, { passive: false });
+    function zoomAt(f, cx, cy) {
+      const [wx, wy] = cx != null ? toWorld(cx, cy) : [view.x + view.w / 2, view.y + view.h / 2];
+      const nw = Math.max(bounds.w / 8, Math.min(bounds.w * 2.5, view.w * f)); const k = nw / view.w;
+      view = { x: wx - (wx - view.x) * k, y: wy - (wy - view.y) * k, w: nw, h: view.h * k }; applyView();
+    }
+
+    const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /* ---- Обновление состояния ---- */
+    function update(state) {
+      const { solution, readingByHouse, mode, norm, deviation, selected, leakNode } = state;
+      const C = SW.colors;
+      const mid = (norm.min + norm.max) / 2, span = mid - norm.min + 0.5;
+      const pressureT = (P) => (P == null ? 0 : (P - mid) / span);
+      const neutral = C.theme().neutral;
+
+      net.pipes.forEach((p) => {
+        const e = pipeEls.get(p.id);
+        const closed = p.closed || (state.closedPipes && state.closedPipes.has(p.id));
+        const q = solution.flow.get(p.id) || 0, v = solution.velocity.get(p.id) || 0;
+        const Pa = solution.pressure.get(p.from), Pb = solution.pressure.get(p.to);
+        let color = neutral;
+        if (closed) color = neutral;
+        else if (mode === 'pressure' && Pa != null && Pb != null) color = C.diverging(pressureT((Pa + Pb) / 2));
+        else if (mode === 'velocity') color = C.sequential(Math.min(1, Math.abs(v) / 1.6));
+        else if (mode === 'pressure') color = neutral;
+        else color = C.diverging(0);
+        e.base.style.stroke = color;
+        e.base.classList.toggle('is-closed', !!closed);
+        const speed = Math.abs(v);
+        if (closed || speed < 0.02 || reduced) { e.flow.style.opacity = closed || speed < 0.02 ? 0 : 0.5; e.flow.style.animation = 'none'; }
+        else {
+          const dur = Math.max(0.5, Math.min(8, 1.4 / speed));
+          e.flow.style.opacity = Math.min(0.95, 0.35 + speed * 0.5);
+          e.flow.style.animation = `sw-dash ${dur.toFixed(2)}s linear infinite`;
+          e.flow.style.animationDirection = q >= 0 ? 'normal' : 'reverse';
+        }
+        if (e.valve) e.valve.classList.toggle('is-closed', !!closed);
+      });
+
+      net.nodes.forEach((n) => {
+        const e = nodeEls.get(n.id); if (!e || n.type === 'junction') return;
+        const P = solution.pressure.get(n.id);
+        const off = solution.noSupply.has(n.id);
+        if (n.type === 'well') {
+          const on = solution.activeWells.has(n.id);
+          const cv = solution.checkValveClosed && solution.checkValveClosed.has(n.id);
+          e.g.classList.toggle('is-off', !on && !cv); e.g.classList.toggle('is-cv', !!cv);
+          const q = solution.wellFlow.get(n.id) || 0;
+          e.badge.textContent = !on && !cv ? 'выключена' : cv ? 'клапан закрыт' : `${(state.wellPressure ? state.wellPressure(n) : n.pressure).toFixed(1)} бар · ${q.toFixed(1)} л/с`;
+          e.g.classList.toggle('is-selected', selected === n.id);
+          return;
+        }
+        const rd = readingByHouse && readingByHouse.get(n.id);
+        let fill = neutral, badge = '';
+        if (off) { fill = 'none'; badge = '✕'; }
+        else if (mode === 'pressure') fill = C.diverging(pressureT(P));
+        else if (mode === 'deviation') fill = rd ? C.diverging(-(-rd.delta) / deviation.warn) : 'none';
+        else fill = 'none';
+        e.shape.style.fill = fill;
+        e.shape.classList.toggle('is-empty', fill === 'none');
+        e.badge.textContent = badge;
+        const st = rd ? rd.status : null;
+        e.g.classList.toggle('has-reading', !!rd);
+        e.g.classList.toggle('is-warn', st === 'warn');
+        e.g.classList.toggle('is-alarm', st === 'alarm' || off);
+        e.g.classList.toggle('is-selected', selected === n.id);
+        e.g.classList.toggle('is-leak', leakNode === n.id);
+        e.g.classList.toggle('is-off', off);
+        const absSt = C.statusFor(P, norm);
+        e.g.dataset.status = off ? 'off' : absSt;
+      });
+    }
+
+    return {
+      svg, update,
+      fitView() { view = Object.assign({}, bounds); applyView(); },
+      zoomBy(f) { zoomAt(f); },
+      focusNode(id) {
+        const n = net.byId.get(id); if (!n) return;
+        const w = Math.min(view.w, bounds.w / 3); const k = w / view.w;
+        view = { x: n.x - w / 2, y: n.y - view.h * k / 2, w, h: view.h * k }; applyView();
+      },
+    };
+  }
+  return { create, pipeWidth };
+})();
+
+/* ============================================================
+ *  Профиль давления вдоль улиц: расчётная линия по магистрали,
+ *  нормативная полоса и точки показаний жителей.
+ * ============================================================ */
+window.SW = window.SW || {};
+
+SW.profile = (function () {
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (tag, attrs, parent) => {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) if (attrs[k] != null) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  };
+  const fmt = (v) => (v == null ? '—' : v.toFixed(2).replace('.', ','));
+
+  function create(host, net, handlers) {
+    handlers = handlers || {};
+    host.classList.add('sw-profile');
+    const charts = net.streets.map((s) => {
+      const wrap = document.createElement('div'); wrap.className = 'sw-profile-chart'; host.appendChild(wrap);
+      const title = document.createElement('div'); title.className = 'sw-profile-title'; wrap.appendChild(title);
+      const svg = el('svg', { class: 'sw-profile-svg' }, wrap);
+      return { s, wrap, title, svg };
+    });
+    const tip = document.createElement('div'); tip.className = 'sw-chart-tip'; tip.hidden = true; host.appendChild(tip);
+    let last = null;
+
+    function render() {
+      if (!last) return;
+      const { solution, readingByHouse, norm } = last;
+      const M = { l: 44, r: 16, t: 12, b: 24 }, H = 150;
+      // общая шкала y для всех улиц
+      let lo = norm.min - 0.5, hi = norm.max + 0.5;
+      net.houses.forEach((h) => { const P = solution.pressure.get(h.id); if (P != null) { lo = Math.min(lo, P); hi = Math.max(hi, P); } const r = readingByHouse.get(h.id); if (r) { lo = Math.min(lo, r.reading.pressure); hi = Math.max(hi, r.reading.pressure); } });
+      lo = Math.floor(lo * 2) / 2 - 0.5; hi = Math.ceil(hi * 2) / 2;
+      lo = Math.max(lo, 0);
+
+      charts.forEach(({ s, title, svg }) => {
+        const W = Math.max(280, svg.clientWidth || 600);
+        svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('height', H);
+        while (svg.firstChild) svg.removeChild(svg.firstChild);
+        const x = (d) => M.l + (d - s.x0) / (s.x1 - s.x0) * (W - M.l - M.r);
+        const y = (p) => M.t + (hi - p) / (hi - lo) * (H - M.t - M.b);
+        const ps = s.junctions.map((j) => solution.pressure.get(j.id)).filter((p) => p != null);
+        const minP = ps.length ? Math.min(...ps) : null, maxP = ps.length ? Math.max(...ps) : null;
+        title.innerHTML = `<span class="sw-profile-name">${s.name}</span><span class="sw-profile-meta">магистраль Ø${s.main.d} · ${s.houses.length} домов · <span class="num">${fmt(minP)}–${fmt(maxP)} бар</span></span>`;
+
+        // норма
+        el('rect', { x: M.l, y: y(norm.max), width: W - M.l - M.r, height: y(norm.min) - y(norm.max), class: 'sw-norm-band' }, svg);
+        // сетка y
+        const step = hi - lo > 4 ? 1 : 0.5;
+        for (let p = Math.ceil(lo / step) * step; p <= hi + 1e-9; p += step) {
+          el('line', { x1: M.l, x2: W - M.r, y1: y(p), y2: y(p), class: 'sw-grid' }, svg);
+          el('text', { x: M.l - 8, y: y(p) + 3.5, class: 'sw-tick', 'text-anchor': 'end' }, svg).textContent = p.toFixed(1).replace('.', ',');
+        }
+        el('line', { x1: M.l, x2: W - M.r, y1: y(lo), y2: y(lo), class: 'sw-axis' }, svg);
+        for (let d = s.x0; d <= s.x1; d += 200) el('text', { x: x(d), y: H - 8, class: 'sw-tick', 'text-anchor': 'middle' }, svg).textContent = d + ' м';
+
+        // расчётная линия
+        const pts = s.junctions.map((j) => [x(j.dist), solution.pressure.get(j.id)]).filter((p) => p[1] != null);
+        if (pts.length > 1) el('path', { d: pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + y(p[1]).toFixed(1)).join(' '), class: 'sw-model-line' }, svg);
+        // дома без воды
+        s.houses.forEach((h) => { if (solution.noSupply.has(h.id)) el('text', { x: x(h.dist), y: y(lo) - 4, class: 'sw-nosupply', 'text-anchor': 'middle' }, svg).textContent = '✕'; });
+        // показания
+        s.houses.forEach((h) => {
+          const r = readingByHouse.get(h.id); if (!r) return;
+          const cx = x(h.dist), cy = y(r.reading.pressure), ey = r.expected != null ? y(r.expected) : cy;
+          const col = SW.colors.diverging(r.delta / last.deviation.warn);
+          el('line', { x1: cx, x2: cx, y1: ey, y2: cy, class: 'sw-stem' }, svg);
+          const g = el('g', { class: 'sw-reading-pt sw-st-' + r.status, tabindex: 0 }, svg);
+          el('circle', { cx, cy, r: 5, style: `fill:${col}`, class: 'sw-reading-dot' }, g);
+          el('circle', { cx, cy, r: 12, class: 'sw-hit' }, g);
+          const show = (e) => { tip.hidden = false; tip.innerHTML = `<b>${h.address}</b><br>показание <span class="num">${fmt(r.reading.pressure)}</span> бар · расчёт <span class="num">${fmt(r.expected)}</span><br>Δ <span class="num">${(r.delta >= 0 ? '+' : '−') + fmt(Math.abs(r.delta))}</span> бар`; place(e); };
+          g.addEventListener('pointerenter', show); g.addEventListener('pointermove', place); g.addEventListener('focus', show);
+          g.addEventListener('pointerleave', () => { tip.hidden = true; }); g.addEventListener('blur', () => { tip.hidden = true; });
+          g.addEventListener('click', () => handlers.onHouseClick && handlers.onHouseClick(h));
+        });
+        // курсор по узлам
+        const cross = el('line', { y1: M.t, y2: H - M.b, class: 'sw-cross' }, svg); cross.style.display = 'none';
+        const cdot = el('circle', { r: 4, class: 'sw-cross-dot' }, svg); cdot.style.display = 'none';
+        svg.addEventListener('pointermove', (e) => {
+          const r = svg.getBoundingClientRect(); const px = (e.clientX - r.left) / r.width * W;
+          if (e.target.closest && e.target.closest('.sw-reading-pt')) return;
+          let best = null; s.junctions.forEach((j) => { const dx = Math.abs(x(j.dist) - px); if (!best || dx < best.dx) best = { j, dx }; });
+          if (!best || best.dx > 30) { cross.style.display = 'none'; cdot.style.display = 'none'; tip.hidden = true; return; }
+          const P = solution.pressure.get(best.j.id); const jx = x(best.j.dist);
+          cross.setAttribute('x1', jx); cross.setAttribute('x2', jx); cross.style.display = '';
+          if (P != null) { cdot.setAttribute('cx', jx); cdot.setAttribute('cy', y(P)); cdot.style.display = ''; }
+          const hs = s.houses.filter((h) => h.junction === best.j.id).map((h) => h.number).join(', ');
+          tip.hidden = false; tip.innerHTML = `<b>${s.name}, ${best.j.dist} м</b>${hs ? ' · дома ' + hs : ''}<br>расчёт <span class="num">${fmt(P)}</span> бар · отметка <span class="num">${best.j.z.toFixed(1)}</span> м`;
+          place(e);
+        });
+        svg.addEventListener('pointerleave', () => { cross.style.display = 'none'; cdot.style.display = 'none'; tip.hidden = true; });
+      });
+    }
+    function place(e) {
+      const r = host.getBoundingClientRect();
+      let left = e.clientX - r.left + 14, top = e.clientY - r.top - 10;
+      if (left + 240 > r.width) left = e.clientX - r.left - 250;
+      tip.style.left = left + 'px'; tip.style.top = top + 'px';
+    }
+    if (window.ResizeObserver) new ResizeObserver(() => render()).observe(host);
+    return { update(state) { last = state; render(); } };
+  }
+  return { create };
+})();
+
+/* ============================================================
+ *  Сборка приложения: SW.mount(container, options)
+ *  options: { config, apiUrl, storageKey, hour, readOnly }
+ * ============================================================ */
+window.SW = window.SW || {};
+
+SW.mount = function (container, options) {
+  options = options || {};
+  const cfg = options.config || SW.defaultConfig;
+  const net = SW.buildNetwork(cfg);
+  const store = SW.reports.create({ apiUrl: options.apiUrl, key: options.storageKey });
+  const H = SW.hydraulics;
+  const fmt = (v, d) => (v == null || !isFinite(v) ? '—' : v.toFixed(d == null ? 2 : d).replace('.', ','));
+  const sgn = (v) => (v >= 0 ? '+' : '−') + fmt(Math.abs(v), 2);
+  const hhmm = (h) => { const m = Math.round(((h % 24) + 24) % 24 * 60); return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
+  const when = (ts) => new Date(ts).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  const now = new Date();
+  const state = {
+    hour: options.hour != null ? options.hour : now.getHours() + now.getMinutes() / 60,
+    playing: false, mode: 'pressure', selected: null,
+    demandScale: 1, wellState: {}, closedPipes: new Set(), leak: { node: '', q: 3 },
+    tab: 'report',
+  };
+  let solution = null, readingByHouse = new Map();
+
+  /* ---------- Разметка ---------- */
+  container.classList.add('sw-app');
+  container.innerHTML = `
+  <header class="sw-head">
+    <div class="sw-title">
+      <h1>${esc(cfg.title)}</h1>
+      <div class="sw-sub">${net.wells.length} скважины · ${net.streets.length} магистрали · ${net.houses.length} домовладений · расчётная схема по Хазену-Вильямсу</div>
+    </div>
+    <div class="sw-stats" id="sw-stats"></div>
+  </header>
+  <div class="sw-body">
+    <section class="sw-main">
+      <div class="sw-toolbar">
+        <div class="sw-seg" role="group" aria-label="Раскраска схемы">
+          <button data-mode="pressure" class="is-on">Давление</button>
+          <button data-mode="deviation">Отклонение</button>
+          <button data-mode="velocity">Поток</button>
+        </div>
+        <div class="sw-time">
+          <button class="sw-btn sw-play" id="sw-play" aria-label="Проиграть сутки" title="Проиграть сутки">▶</button>
+          <input type="range" id="sw-hour" min="0" max="24" step="0.25" aria-label="Час суток">
+          <output id="sw-hour-out" class="num"></output>
+          <button class="sw-btn sw-ghost" id="sw-now" title="Текущее время">сейчас</button>
+        </div>
+        <div class="sw-zoom">
+          <button class="sw-btn" id="sw-zin" aria-label="Приблизить">+</button>
+          <button class="sw-btn" id="sw-zout" aria-label="Отдалить">−</button>
+          <button class="sw-btn sw-ghost" id="sw-fit">вся схема</button>
+        </div>
+      </div>
+      <div class="sw-canvas" id="sw-canvas">
+        <div class="sw-legend" id="sw-legend"></div>
+        <div class="sw-tip" id="sw-tip" hidden></div>
+      </div>
+      <div id="sw-profile"></div>
+    </section>
+    <aside class="sw-side">
+      <nav class="sw-tabs" role="tablist">
+        <button role="tab" data-tab="report">Показание</button>
+        <button role="tab" data-tab="log">Журнал</button>
+        <button role="tab" data-tab="scenario">Сценарий</button>
+        <button role="tab" data-tab="diag">Диагностика</button>
+      </nav>
+      <div class="sw-panel" data-panel="report">
+        <form id="sw-form" class="sw-form" autocomplete="off">
+          <p class="sw-lead">Сообщите давление на вводе в дом — схема сравнит его с расчётным и покажет, где в сети перекос.</p>
+          <label>Адрес
+            <input name="address" list="sw-addr" placeholder="ул. Сиреневая, 17" required>
+            <datalist id="sw-addr">${net.houses.map((h) => `<option value="${esc(h.address)}">`).join('')}</datalist>
+          </label>
+          <label>Давление по манометру, бар
+            <input name="pressure" type="number" min="0" max="10" step="0.1" inputmode="decimal" placeholder="3,2" required>
+          </label>
+          <label>Комментарий <span class="sw-opt">необязательно</span>
+            <input name="comment" maxlength="200" placeholder="напор слабый вечером">
+          </label>
+          <button type="submit" class="sw-btn sw-primary">Отправить показание</button>
+          <div class="sw-form-msg" id="sw-form-msg" aria-live="polite"></div>
+          <details class="sw-howto"><summary>Как правильно измерить</summary>
+            <ul><li>Манометр на вводе после счётчика, все краны в доме закрыты.</li><li>Подождите 10–15 секунд, пока стрелка успокоится.</li><li>Показание считается актуальным ${cfg.readingTtlHours} ч; вечерний и утренний пики сравниваются со своим расчётом.</li></ul>
+          </details>
+        </form>
+      </div>
+      <div class="sw-panel" data-panel="log" hidden>
+        <div class="sw-log-head"><span id="sw-log-count"></span>
+          <span class="sw-log-actions"><button class="sw-btn sw-ghost" id="sw-demo">демо-показания</button><button class="sw-btn sw-ghost" id="sw-clear">очистить</button></span></div>
+        <div class="sw-table-wrap"><table class="sw-table" id="sw-log"><thead><tr><th>Адрес</th><th>Когда</th><th class="num">Изм.</th><th class="num">Расч.</th><th class="num">Δ</th><th></th></tr></thead><tbody></tbody></table></div>
+      </div>
+      <div class="sw-panel" data-panel="scenario" hidden>
+        <h3>Скважины</h3>
+        <div id="sw-wells"></div>
+        <h3>Водоразбор</h3>
+        <label class="sw-range">Множитель потребления <output id="sw-demand-out" class="num"></output>
+          <input type="range" id="sw-demand" min="0.3" max="2.5" step="0.1"></label>
+        <p class="sw-hint">1,0 — обычный день; 1,8–2,5 — вечерний полив в жару.</p>
+        <h3>Перемычки</h3>
+        <div id="sw-links"></div>
+        <h3>Имитация порыва</h3>
+        <label>Место утечки
+          <select id="sw-leak"><option value="">нет</option>${net.streets.map((s) => `<optgroup label="${esc(s.name)}">${s.junctions.filter((j, i) => i % 2 === 0).map((j) => `<option value="${j.id}">${esc(s.name)}, ${j.dist} м</option>`).join('')}</optgroup>`).join('')}</select>
+        </label>
+        <label class="sw-range">Расход утечки, л/с <output id="sw-leakq-out" class="num"></output>
+          <input type="range" id="sw-leakq" min="0.5" max="12" step="0.5"></label>
+        <button class="sw-btn sw-ghost" id="sw-reset">Сбросить сценарий</button>
+      </div>
+      <div class="sw-panel" data-panel="diag" hidden><div id="sw-diag"></div></div>
+    </aside>
+  </div>
+  <div class="sw-toast" id="sw-toast" role="status" aria-live="polite" hidden></div>`;
+
+  const $ = (sel) => container.querySelector(sel);
+  const canvas = $('#sw-canvas'), tip = $('#sw-tip');
+
+  /* ---------- Схема и профиль ---------- */
+  const scheme = SW.scheme.create(canvas, net, {
+    onNodeClick(n) {
+      if (n.type === 'house') { state.selected = state.selected === n.id ? null : n.id; if (state.selected) { $('#sw-form [name=address]').value = n.address; showTab('report'); } }
+      else if (n.type === 'well') { showTab('scenario'); }
+      render();
+    },
+    onValveClick(p) { toggleClosed(p.id); },
+    onBackgroundClick() { if (state.selected) { state.selected = null; render(); } },
+    onHover(info, e) {
+      if (!info) { tip.hidden = true; return; }
+      tip.innerHTML = tooltipHtml(info); tip.hidden = false;
+      const r = canvas.getBoundingClientRect();
+      let left = e.clientX - r.left + 14, top = e.clientY - r.top + 14;
+      if (left + 260 > r.width) left = Math.max(4, e.clientX - r.left - 270);
+      if (top + 120 > r.height) top = Math.max(4, e.clientY - r.top - 130);
+      tip.style.left = left + 'px'; tip.style.top = top + 'px';
+    },
+  });
+  const profile = SW.profile.create($('#sw-profile'), net, { onHouseClick(h) { state.selected = h.id; scheme.focusNode(h.id); render(); } });
+
+  function tooltipHtml(info) {
+    if (info.kind === 'pipe') {
+      const p = info.pipe; const v = solution.velocity.get(p.id) || 0, q = (solution.flow.get(p.id) || 0) * 1000;
+      const name = p.name || (p.kind === 'main' ? 'Магистраль, ' + streetName(p.street) : p.kind === 'branch' ? 'Ввод в дом' : p.kind === 'well' ? 'Водовод от скважины' : 'Перемычка');
+      return `<b>${esc(name)}</b><br>Ø${p.d} ${esc(p.material)} · ${p.length} м<br>расход <span class="num">${fmt(Math.abs(q), 2)}</span> л/с · скорость <span class="num">${fmt(Math.abs(v), 2)}</span> м/с${p.closed || state.closedPipes.has(p.id) ? '<br><em>перекрыта</em>' : ''}`;
+    }
+    const n = info.node; const P = solution.pressure.get(n.id);
+    if (n.type === 'well') {
+      const q = solution.wellFlow.get(n.id) || 0;
+      const cv = solution.checkValveClosed.has(n.id);
+      return `<b>${esc(n.name)}</b><br>на выходе <span class="num">${fmt(wellPressure(n), 1)}</span> бар · отметка <span class="num">${n.z.toFixed(1)}</span> м<br>подача <span class="num">${fmt(q, 2)}</span> л/с${cv ? '<br><em>обратный клапан закрыт: напор сети выше напора скважины</em>' : ''}`;
+    }
+    const rd = readingByHouse.get(n.id);
+    const st = solution.noSupply.has(n.id) ? 'нет подачи' : statusLabel(SW.colors.statusFor(P, cfg.norm));
+    return `<b>${esc(n.address)}</b><br>расчёт <span class="num">${fmt(P)}</span> бар · ${st}<br>отметка <span class="num">${n.z.toFixed(1)}</span> м` +
+      (rd ? `<br>показание <span class="num">${fmt(rd.reading.pressure)}</span> бар (${when(rd.reading.ts)}) · Δ <span class="num">${sgn(rd.delta)}</span> — ${devLabel(rd.status)}` : '<br><em>показаний нет — нажмите, чтобы ввести</em>');
+  }
+  const streetName = (id) => (net.streets.find((s) => s.id === id) || {}).name || id;
+  const statusLabel = (s) => ({ good: 'норма', warning: 'на границе нормы', serious: 'вне нормы', critical: 'критично', none: '—' }[s]);
+  const devLabel = (s) => ({ ok: 'совпадает с расчётом', warn: 'заметное отклонение', alarm: 'сильное отклонение' }[s]);
+  const wellPressure = (w) => (state.wellState[w.id] && state.wellState[w.id].pressure != null ? state.wellState[w.id].pressure : w.pressure);
+
+  /* ---------- Расчёт ---------- */
+  function compute() {
+    const extra = {}; if (state.leak.node) extra[state.leak.node] = state.leak.q;
+    solution = H.solve(net, { hour: state.hour, demandScale: state.demandScale, wellState: state.wellState, closedPipes: state.closedPipes, extraDemand: extra });
+    readingByHouse = evaluateReadings();
+  }
+  function evaluateReadings() {
+    const ttl = cfg.readingTtlHours * 3600e3, cutoff = Date.now() - ttl;
+    const map = new Map();
+    store.list().forEach((r) => {
+      if (r.ts < cutoff || map.has(r.houseId) || !net.byId.get(r.houseId)) return;
+      // расчёт берём для часа, когда снято показание
+      const d = new Date(r.ts); const hour = d.getHours() + d.getMinutes() / 60;
+      const extra = {}; if (state.leak.node) extra[state.leak.node] = state.leak.q;
+      const sol = Math.abs(hour - state.hour) < 0.5 ? solution : H.solve(net, { hour, demandScale: state.demandScale, wellState: state.wellState, closedPipes: state.closedPipes, extraDemand: extra });
+      const expected = sol.pressure.get(r.houseId);
+      const delta = expected == null ? r.pressure : r.pressure - expected;
+      map.set(r.houseId, { reading: r, expected, delta, status: SW.colors.deviationStatus(delta, cfg.deviation) });
+    });
+    return map;
+  }
+
+  /* ---------- Диагностика ---------- */
+  function diagnostics() {
+    const out = [];
+    const norm = cfg.norm;
+    net.wells.forEach((w) => {
+      const q = solution.wellFlow.get(w.id) || 0;
+      if (!solution.activeWells.has(w.id) && !solution.checkValveClosed.has(w.id)) out.push({ lvl: 'warning', t: `${w.name} выключена`, d: 'Сеть питается от остальных скважин.' });
+      else if (solution.checkValveClosed.has(w.id)) out.push({ lvl: 'info', t: `${w.name} не подаёт воду`, d: `Напор сети выше напора скважины (${fmt(wellPressure(w), 1)} бар) — обратный клапан закрыт. Так бывает при малом водоразборе; при пике она включится в работу.` });
+      else out.push({ lvl: 'info', t: `${w.name}: ${fmt(q, 1)} л/с`, d: `Давление на выходе ${fmt(wellPressure(w), 1)} бар.` });
+    });
+    const off = net.houses.filter((h) => solution.noSupply.has(h.id));
+    if (off.length) out.push({ lvl: 'critical', t: `Без подачи: ${off.length} дом.`, d: off.slice(0, 6).map((h) => h.address).join('; ') + (off.length > 6 ? '…' : '') });
+    const low = net.houses.filter((h) => !solution.noSupply.has(h.id) && solution.pressure.get(h.id) < norm.min);
+    const high = net.houses.filter((h) => solution.pressure.get(h.id) > norm.max);
+    if (low.length) out.push({ lvl: low.some((h) => solution.pressure.get(h.id) < norm.min - 0.7) ? 'critical' : 'serious', t: `Ниже нормы (${norm.min.toFixed(1)} бар): ${low.length} дом.`, d: low.slice(0, 6).map((h) => `${h.address} — ${fmt(solution.pressure.get(h.id), 1)}`).join('; ') + (low.length > 6 ? '…' : '') });
+    if (high.length) out.push({ lvl: 'serious', t: `Выше нормы (${norm.max.toFixed(1)} бар): ${high.length} дом.`, d: high.slice(0, 6).map((h) => `${h.address} — ${fmt(solution.pressure.get(h.id), 1)}`).join('; ') });
+    net.streets.forEach((s) => {
+      const ps = s.houses.map((h) => solution.pressure.get(h.id)).filter((p) => p != null);
+      if (!ps.length) return;
+      const spread = Math.max(...ps) - Math.min(...ps);
+      const iMin = s.houses[ps.indexOf(Math.min(...ps))];
+      if (spread > 1.0) out.push({ lvl: spread > 1.6 ? 'serious' : 'warning', t: `Перекос по ${s.name}: ${fmt(spread, 1)} бар`, d: `Минимум у дома ${iMin.number} (${fmt(Math.min(...ps), 1)} бар). Причины: удалённость от скважин, перепад высот, диаметр магистрали Ø${s.main.d}.` });
+      else out.push({ lvl: 'good', t: `${s.name}: равномерно`, d: `Разброс ${fmt(spread, 1)} бар по ${s.houses.length} домам.` });
+    });
+    net.pipes.filter((p) => p.kind === 'main').forEach((p) => {
+      const v = Math.abs(solution.velocity.get(p.id) || 0);
+      if (v > 2.0) out.push({ lvl: 'warning', t: `Скорость ${fmt(v, 1)} м/с в магистрали ${streetName(p.street)}`, d: `Участок ${p.from}–${p.to}: выше рекомендуемых 1,5–2 м/с — большие потери напора, стоит рассмотреть больший диаметр.` });
+    });
+    // группы отклонений по показаниям
+    net.streets.forEach((s) => {
+      const bad = s.houses.map((h) => ({ h, r: readingByHouse.get(h.id) })).filter((x) => x.r && x.r.status !== 'ok');
+      const lowGrp = bad.filter((x) => x.r.delta < 0), highGrp = bad.filter((x) => x.r.delta > 0);
+      const cluster = (grp) => { // соседние дома (в пределах 120 м) — один участок
+        const sorted = grp.slice().sort((a, b) => a.h.dist - b.h.dist); const groups = [];
+        sorted.forEach((x) => { const g = groups[groups.length - 1]; if (g && x.h.dist - g[g.length - 1].h.dist <= 120) g.push(x); else groups.push([x]); });
+        return groups;
+      };
+      cluster(lowGrp).forEach((g) => {
+        const avg = g.reduce((a, x) => a + x.r.delta, 0) / g.length;
+        if (g.length >= 2) out.push({ lvl: 'critical', t: `${s.name}, участок ${g[0].h.dist}–${g[g.length - 1].h.dist} м: показания ниже расчёта на ${fmt(-avg, 1)} бар`, d: `${g.length} дома (${g.map((x) => x.h.number).join(', ')}). Похоже на порыв, засор или прикрытую задвижку на магистрали перед участком.` });
+        else out.push({ lvl: g[0].r.status === 'alarm' ? 'serious' : 'warning', t: `${g[0].h.address}: ниже расчёта на ${fmt(-avg, 1)} бар`, d: 'Соседи в норме — вероятна проблема на вводе дома: фильтр, счётчик, кран, ввод малого диаметра.' });
+      });
+      cluster(highGrp).forEach((g) => {
+        const avg = g.reduce((a, x) => a + x.r.delta, 0) / g.length;
+        out.push({ lvl: 'warning', t: `${g.length > 1 ? s.name + ', дома ' + g.map((x) => x.h.number).join(', ') : g[0].h.address}: выше расчёта на ${fmt(avg, 1)} бар`, d: g.length > 1 ? 'Скважина работает на большем давлении, чем задано в модели, либо в модели занижен диаметр — уточните параметры в «Сценарии».' : 'Проверьте манометр или снимите показание ещё раз при закрытых кранах.' });
+      });
+    });
+    const order = { critical: 0, serious: 1, warning: 2, info: 3, good: 4 };
+    return out.sort((a, b) => order[a.lvl] - order[b.lvl]);
+  }
+
+  /* ---------- Рендер ---------- */
+  function readTheme() {
+    const cs = getComputedStyle(container);
+    SW.colors.setTheme({ mid: cs.getPropertyValue('--div-mid').trim() || '#f0efec', blue: cs.getPropertyValue('--blue').trim() || '#2a78d6', red: cs.getPropertyValue('--red').trim() || '#e34948',
+      seqLo: cs.getPropertyValue('--seq-lo').trim() || '#cde2fb', seqHi: cs.getPropertyValue('--seq-hi').trim() || '#0d366b', neutral: cs.getPropertyValue('--neutral').trim() || '#c3c2b7' });
+  }
+  function render() {
+    readTheme(); compute();
+    const st = { solution, readingByHouse, mode: state.mode, norm: cfg.norm, deviation: cfg.deviation, selected: state.selected, closedPipes: state.closedPipes, leakNode: state.leak.node, wellPressure };
+    scheme.update(st); profile.update(st);
+    renderStats(); renderLegend(); renderLog(); renderScenario(); renderDiag();
+    $('#sw-hour').value = state.hour; $('#sw-hour-out').textContent = hhmm(state.hour);
+  }
+  function renderStats() {
+    let supply = 0; solution.wellFlow.forEach((q) => { supply += q; });
+    const ps = net.houses.map((h) => solution.pressure.get(h.id)).filter((p) => p != null);
+    const actual = readingByHouse.size, alarms = [...readingByHouse.values()].filter((r) => r.status !== 'ok').length;
+    const lowN = net.houses.filter((h) => solution.noSupply.has(h.id) || solution.pressure.get(h.id) < cfg.norm.min).length;
+    $('#sw-stats').innerHTML = [
+      ['Подача', fmt(supply, 1), 'л/с', 'info'],
+      ['Давление у домов', `${fmt(Math.min(...ps), 1)}–${fmt(Math.max(...ps), 1)}`, 'бар', lowN ? 'serious' : 'good'],
+      ['Ниже нормы', String(lowN), 'дом.', lowN ? 'serious' : 'good'],
+      ['Показаний', String(actual), `за ${cfg.readingTtlHours} ч`, 'info'],
+      ['Отклонений', String(alarms), 'от расчёта', alarms ? 'critical' : 'good'],
+    ].map(([l, v, u, lvl]) => `<div class="sw-stat sw-lvl-${lvl}"><span class="sw-stat-l">${l}</span><span class="sw-stat-v num">${v}<small>${u}</small></span></div>`).join('');
+  }
+  function renderLegend() {
+    const C = SW.colors; const n = cfg.norm;
+    const bar = (fn, labels) => `<div class="sw-lg-bar" style="background:linear-gradient(90deg,${Array.from({ length: 9 }, (_, i) => fn(i / 8)).join(',')})"></div><div class="sw-lg-lab">${labels.map((l) => `<span>${l}</span>`).join('')}</div>`;
+    let html = '';
+    if (state.mode === 'pressure') html = `<div class="sw-lg-title">Расчётное давление, бар</div>` + bar((t) => C.diverging(t * 2 - 1), [`< ${(n.min - 0.5).toFixed(1)}`, `${((n.min + n.max) / 2).toFixed(1)}`, `> ${(n.max + 0.5).toFixed(1)}`]) + `<div class="sw-lg-note">норма ${n.min.toFixed(1)}–${n.max.toFixed(1)} · красное — проседает, синее — завышено</div>`;
+    else if (state.mode === 'deviation') html = `<div class="sw-lg-title">Показание жителя − расчёт, бар</div>` + bar((t) => C.diverging(t * 2 - 1), [`−${cfg.deviation.warn.toFixed(1)}`, '0', `+${cfg.deviation.warn.toFixed(1)}`]) + `<div class="sw-lg-note">окрашены только дома с актуальными показаниями</div>`;
+    else html = `<div class="sw-lg-title">Скорость в трубе, м/с</div>` + bar((t) => C.sequential(t), ['0', '0,8', '1,6+']) + `<div class="sw-lg-note">бегущие штрихи — направление и скорость потока</div>`;
+    html += `<div class="sw-lg-keys"><span><i class="sw-k sw-k-well"></i>скважина</span><span><i class="sw-k sw-k-house"></i>дом</span><span><i class="sw-k sw-k-read"></i>есть показание</span><span><i class="sw-k sw-k-alarm"></i>сильное отклонение</span><span><i class="sw-k sw-k-off"></i>нет подачи</span></div>`;
+    $('#sw-legend').innerHTML = html;
+  }
+  function renderLog() {
+    const cutoff = Date.now() - cfg.readingTtlHours * 3600e3;
+    const list = store.list().slice().sort((a, b) => b.ts - a.ts);
+    const fresh = list.filter((r) => r.ts >= cutoff).length;
+    $('#sw-log-count').innerHTML = `актуальных <b class="num">${fresh}</b> · всего <b class="num">${list.length}</b>${store.mode === 'api' ? ' · общий журнал' : ' · этот браузер'}`;
+    const tb = $('#sw-log tbody');
+    tb.innerHTML = list.length ? list.map((r) => {
+      const ev = readingByHouse.get(r.houseId); const isCur = ev && ev.reading.id === r.id;
+      let expected = isCur ? ev.expected : null, delta = isCur ? ev.delta : null, st = isCur ? ev.status : null;
+      if (!isCur && r.ts >= cutoff) { const d = new Date(r.ts); const sol = H.solve(net, { hour: d.getHours() + d.getMinutes() / 60, demandScale: state.demandScale, wellState: state.wellState, closedPipes: state.closedPipes }); expected = sol.pressure.get(r.houseId); if (expected != null) { delta = r.pressure - expected; st = SW.colors.deviationStatus(delta, cfg.deviation); } }
+      return `<tr class="${r.ts < cutoff ? 'is-old' : ''} ${state.selected === r.houseId ? 'is-selected' : ''}" data-house="${r.houseId}">
+        <td>${esc(r.address)}${r.demo ? ' <span class="sw-tag">пример</span>' : ''}${r.comment ? `<div class="sw-comment">${esc(r.comment)}</div>` : ''}</td>
+        <td class="num sw-dim">${when(r.ts)}</td><td class="num">${fmt(r.pressure, 1)}</td><td class="num sw-dim">${fmt(expected, 1)}</td>
+        <td class="num">${delta == null ? '—' : `<span class="sw-chip sw-chip-${st}">${sgn(delta)}</span>`}</td>
+        <td><button class="sw-x" data-del="${r.id}" aria-label="Удалить">✕</button></td></tr>`;
+    }).join('') : '<tr><td colspan="6" class="sw-empty">Показаний пока нет. Введите своё на вкладке «Показание» или загрузите демо-показания.</td></tr>';
+  }
+  function renderScenario() {
+    const wells = $('#sw-wells');
+    if (!wells.dataset.built) {
+      wells.innerHTML = net.wells.map((w) => `<div class="sw-well-row" data-well="${w.id}">
+        <label class="sw-switch"><input type="checkbox" data-on="${w.id}" checked><span>${esc(w.name)}</span></label>
+        <span class="sw-well-q num" data-q="${w.id}"></span>
+        <label class="sw-range">на выходе <output class="num" data-pout="${w.id}"></output> бар<input type="range" data-p="${w.id}" min="0" max="7" step="0.1" value="${w.pressure}"></label></div>`).join('');
+      wells.dataset.built = 1;
+      wells.addEventListener('input', (e) => {
+        const t = e.target;
+        if (t.dataset.p) { state.wellState[t.dataset.p] = Object.assign({}, state.wellState[t.dataset.p], { pressure: Number(t.value) }); render(); }
+        if (t.dataset.on) { state.wellState[t.dataset.on] = Object.assign({}, state.wellState[t.dataset.on], { on: t.checked }); render(); }
+      });
+      const links = net.pipes.filter((p) => p.valve);
+      $('#sw-links').innerHTML = links.length ? links.map((p) => `<label class="sw-switch"><input type="checkbox" data-link="${p.id}" ${p.closed ? '' : 'checked'}><span>${esc(p.name || p.id)} <small>Ø${p.d}, ${p.length} м</small></span></label>`).join('') : '<p class="sw-hint">Перемычек нет.</p>';
+      $('#sw-links').addEventListener('change', (e) => { if (e.target.dataset.link) toggleClosed(e.target.dataset.link, !e.target.checked); });
+    }
+    net.wells.forEach((w) => {
+      const q = solution.wellFlow.get(w.id) || 0; const cv = solution.checkValveClosed.has(w.id);
+      wells.querySelector(`[data-q="${w.id}"]`).textContent = !solution.activeWells.has(w.id) && !cv ? 'выкл.' : cv ? 'клапан закрыт' : fmt(q, 1) + ' л/с';
+      wells.querySelector(`[data-pout="${w.id}"]`).textContent = fmt(wellPressure(w), 1);
+      wells.querySelector(`[data-p="${w.id}"]`).value = wellPressure(w);
+      wells.querySelector(`[data-on="${w.id}"]`).checked = !(state.wellState[w.id] && state.wellState[w.id].on === false);
+    });
+    net.pipes.filter((p) => p.valve).forEach((p) => { const cb = $(`[data-link="${p.id}"]`); if (cb) cb.checked = !(p.closed || state.closedPipes.has(p.id)); });
+    $('#sw-demand').value = state.demandScale; $('#sw-demand-out').textContent = '×' + fmt(state.demandScale, 1);
+    $('#sw-leak').value = state.leak.node; $('#sw-leakq').value = state.leak.q; $('#sw-leakq-out').textContent = fmt(state.leak.q, 1);
+  }
+  function renderDiag() {
+    const items = diagnostics();
+    const icon = { critical: '⨯', serious: '!', warning: '△', info: 'i', good: '✓' };
+    $('#sw-diag').innerHTML = `<p class="sw-lead">Выводы для ${hhmm(state.hour)} с учётом сценария и актуальных показаний.</p>` + items.map((it) => `<div class="sw-diag-item sw-lvl-${it.lvl}"><span class="sw-diag-ic" aria-hidden="true">${icon[it.lvl]}</span><div><div class="sw-diag-t">${esc(it.t)}</div><div class="sw-diag-d">${esc(it.d)}</div></div></div>`).join('');
+  }
+
+  /* ---------- Управление ---------- */
+  function showTab(id) {
+    state.tab = id;
+    container.querySelectorAll('.sw-tabs [role=tab]').forEach((b) => b.setAttribute('aria-selected', b.dataset.tab === id));
+    container.querySelectorAll('.sw-panel').forEach((p) => { p.hidden = p.dataset.panel !== id; });
+  }
+  function toggleClosed(id, closed) {
+    const p = net.pipeById.get(id); if (!p) return;
+    const willClose = closed == null ? !(p.closed || state.closedPipes.has(id)) : closed;
+    p.closed = false; if (willClose) state.closedPipes.add(id); else state.closedPipes.delete(id);
+    toast(`${p.name || 'Труба ' + id}: ${willClose ? 'перекрыта' : 'открыта'}`); render();
+  }
+  let toastTimer;
+  function toast(msg) { const t = $('#sw-toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3500); }
+
+  container.querySelectorAll('.sw-tabs [role=tab]').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
+  container.querySelectorAll('.sw-seg [data-mode]').forEach((b) => b.addEventListener('click', () => { state.mode = b.dataset.mode; container.querySelectorAll('.sw-seg [data-mode]').forEach((x) => x.classList.toggle('is-on', x === b)); render(); }));
+  $('#sw-hour').addEventListener('input', (e) => { state.hour = Number(e.target.value); render(); });
+  $('#sw-now').addEventListener('click', () => { const d = new Date(); state.hour = d.getHours() + d.getMinutes() / 60; render(); });
+  $('#sw-zin').addEventListener('click', () => scheme.zoomBy(1 / 1.3));
+  $('#sw-zout').addEventListener('click', () => scheme.zoomBy(1.3));
+  $('#sw-fit').addEventListener('click', () => scheme.fitView());
+  let timer = null;
+  $('#sw-play').addEventListener('click', () => {
+    state.playing = !state.playing; $('#sw-play').textContent = state.playing ? '❚❚' : '▶'; $('#sw-play').classList.toggle('is-on', state.playing);
+    clearInterval(timer);
+    if (state.playing) timer = setInterval(() => { state.hour = (state.hour + 0.125) % 24; render(); }, 160);
+  });
+  $('#sw-demand').addEventListener('input', (e) => { state.demandScale = Number(e.target.value); render(); });
+  $('#sw-leak').addEventListener('change', (e) => { state.leak.node = e.target.value; render(); });
+  $('#sw-leakq').addEventListener('input', (e) => { state.leak.q = Number(e.target.value); render(); });
+  $('#sw-reset').addEventListener('click', () => { state.wellState = {}; state.closedPipes = new Set(); state.leak = { node: '', q: 3 }; state.demandScale = 1; net.pipes.forEach((p) => { if (p.valve) p.closed = false; }); toast('Сценарий сброшен'); render(); });
+
+  $('#sw-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const f = e.target; const msg = $('#sw-form-msg');
+    const addr = f.address.value.trim().toLowerCase().replace(/\s+/g, ' ');
+    const house = net.houses.find((h) => h.address.toLowerCase() === addr) || net.houses.find((h) => addr && (h.address.toLowerCase().endsWith(', ' + addr) || h.address.toLowerCase().includes(addr)));
+    const pressure = Number(String(f.pressure.value).replace(',', '.'));
+    if (!house) { msg.className = 'sw-form-msg is-err'; msg.textContent = 'Такого адреса нет в схеме. Выберите адрес из списка или нажмите на дом на схеме.'; return; }
+    if (!isFinite(pressure) || pressure < 0 || pressure > 10) { msg.className = 'sw-form-msg is-err'; msg.textContent = 'Давление укажите в барах, от 0 до 10.'; return; }
+    const r = await store.add({ houseId: house.id, address: house.address, pressure, comment: f.comment.value.trim() });
+    state.selected = house.id; render();
+    const ev = readingByHouse.get(house.id);
+    msg.className = 'sw-form-msg is-ok';
+    msg.innerHTML = `Принято: ${esc(house.address)} — <span class="num">${fmt(pressure, 1)}</span> бар. Расчёт <span class="num">${fmt(ev && ev.expected, 1)}</span>, Δ <span class="num">${ev ? sgn(ev.delta) : '—'}</span> — ${ev ? devLabel(ev.status) : ''}.`;
+    f.pressure.value = ''; f.comment.value = '';
+    toast('Показание сохранено'); void r;
+  });
+  $('#sw-log').addEventListener('click', (e) => {
+    const del = e.target.closest('[data-del]'); if (del) { store.remove(del.dataset.del); return; }
+    const row = e.target.closest('tr[data-house]'); if (row) { state.selected = row.dataset.house; scheme.focusNode(row.dataset.house); render(); }
+  });
+  $('#sw-clear').addEventListener('click', () => { if (confirm('Удалить все показания?')) store.clear(); });
+  $('#sw-demo').addEventListener('click', seedDemo);
+  store.onChange(() => render());
+
+  /* Демонстрационные показания: помечены как «пример» */
+  async function seedDemo() {
+    await store.clear((r) => r.demo);
+    const pick = (id) => net.byId.get(id);
+    const t = Date.now(); const d = new Date(t); const hour = d.getHours() + d.getMinutes() / 60;
+    const base = H.solve(net, { hour, demandScale: state.demandScale, wellState: state.wellState, closedPipes: state.closedPipes });
+    const rows = [
+      ['Ah3', 0.05, 'манометр на вводе'], ['Ah12', -0.1, ''], ['Ah21', 0.0, ''], ['Ah30', -0.15, ''],
+      ['Bh6', 0.1, ''], ['Bh15', -0.9, 'вечером еле течёт'], ['Bh17', -1.1, 'напор упал со вчера'], ['Bh18', -0.8, ''],
+      ['Bh29', -0.05, ''], ['Bh39', 0.1, ''], ['Ah41', -0.6, 'после замены фильтра стало хуже'], ['Ah46', 0.55, ''],
+    ];
+    for (const [id, dlt, c] of rows) {
+      const h = pick(id); if (!h) continue;
+      const P = base.pressure.get(id); if (P == null) continue;
+      await store.add({ houseId: id, address: h.address, pressure: Math.round((P + dlt) * 10) / 10, comment: c, demo: true, ts: t - Math.floor(Math.random() * 5 * 3600e3) });
+    }
+    showTab('log'); toast('Загружены демо-показания (помечены как «пример»)');
+  }
+
+  /* ---------- Старт ---------- */
+  showTab(state.tab);
+  render();
+  store.refresh().then(() => { if (!store.list().length && options.seedDemo !== false) seedDemo(); });
+  if (window.matchMedia) { const mq = window.matchMedia('(prefers-color-scheme: dark)'); (mq.addEventListener || mq.addListener).call(mq, mq.addEventListener ? 'change' : render, render); }
+  new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  return { net, state, store, render, solve: () => solution, showTab };
+};
+
+SW.mount(document.getElementById('water-scheme'), {});
+</script>

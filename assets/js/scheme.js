@@ -92,8 +92,24 @@ SW.scheme = (function () {
     if (bg && bg.url) { xs.push(bg.x || 0, (bg.x || 0) + bg.width); ys.push(bg.y || 0, (bg.y || 0) + bg.height); }
     const bounds = { x: Math.min(...xs) - pad, y: Math.min(...ys) - pad - 10, w: Math.max(...xs) - Math.min(...xs) + pad * 2, h: Math.max(...ys) - Math.min(...ys) + pad * 2 + 10 };
     let view = Object.assign({}, bounds);
-    const applyView = () => svg.setAttribute('viewBox', `${view.x} ${view.y} ${view.w} ${view.h}`);
+    const hitEls = [];
+    /* Площадка попадания держится примерно постоянной на экране (~22 px),
+     * иначе на общем плане дома становятся неприцельными. */
+    let lastHitW = 0;
+    function updateHitAreas() {
+      const px = svg.clientWidth || svg.getBoundingClientRect().width || 1;
+      const half = Math.max(9, (view.w / px) * 11);
+      hitEls.forEach((r) => {
+        r.setAttribute('x', -half); r.setAttribute('y', -half);
+        r.setAttribute('width', half * 2); r.setAttribute('height', half * 2);
+      });
+    }
+    const applyView = () => {
+      svg.setAttribute('viewBox', `${view.x} ${view.y} ${view.w} ${view.h}`);
+      if (view.w !== lastHitW) { lastHitW = view.w; updateHitAreas(); }
+    };
     applyView();
+    window.addEventListener('resize', updateHitAreas);
 
     // Подложка улиц
     net.streets.forEach((s) => {
@@ -128,6 +144,11 @@ SW.scheme = (function () {
         return;
       }
       const g = el('g', { class: `sw-node sw-${n.type}`, transform: `translate(${n.x} ${n.y})`, 'data-id': n.id, tabindex: 0, role: 'button' }, gNodes);
+      /* Невидимая площадка попадания: сам домик на общем плане — это 6 пикселей
+       * на экране, пальцем в него не попасть. Размер пересчитывается под
+       * текущий масштаб в updateHitAreas(). */
+      const hit = el('rect', { class: 'sw-hit' }, g);
+      hitEls.push(hit);
       let shape, halo, ring, badge;
       if (n.type === 'well') {
         halo = el('circle', { r: 26, class: 'sw-halo' }, g);
@@ -142,17 +163,23 @@ SW.scheme = (function () {
         el('text', { x: 0, y: n.side === 0 ? -14 : 20, class: 'sw-house-num' }, g).textContent = n.number;
         badge = el('text', { x: 0, y: 3.2, class: 'sw-house-badge' }, g);
       }
-      g.addEventListener('click', (e) => { e.stopPropagation(); handlers.onNodeClick && handlers.onNodeClick(n); });
       g.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handlers.onNodeClick && handlers.onNodeClick(n); } });
       g.addEventListener('pointerenter', (e) => handlers.onHover && handlers.onHover({ kind: 'node', node: n }, e));
       g.addEventListener('pointerleave', () => handlers.onHover && handlers.onHover(null));
       nodeEls.set(n.id, { g, shape, halo, ring, badge });
     });
 
+    updateHitAreas();   // узлы уже созданы — задаём площадкам размер
+
     /* ---- Панорамирование и масштаб ---- */
     let drag = null;
     const toWorld = (cx, cy) => { const r = svg.getBoundingClientRect(); return [view.x + (cx - r.left) / r.width * view.w, view.y + (cy - r.top) / r.height * view.h]; };
-    svg.addEventListener('pointerdown', (e) => { if (e.button !== 0) return; drag = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, moved: false }; svg.setPointerCapture(e.pointerId); });
+    svg.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      const g = e.target.closest && e.target.closest('.sw-node');
+      drag = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, moved: false, nodeId: g ? g.getAttribute('data-id') : null };
+      svg.setPointerCapture(e.pointerId);
+    });
     svg.addEventListener('pointermove', (e) => {
       if (!drag) return;
       const r = svg.getBoundingClientRect();
@@ -160,7 +187,17 @@ SW.scheme = (function () {
       if (Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) > 3) drag.moved = true;
       view.x = drag.vx - dx; view.y = drag.vy - dy; applyView();
     });
-    const endDrag = () => { if (drag && !drag.moved) handlers.onBackgroundClick && handlers.onBackgroundClick(); drag = null; };
+    /* Нажали и отпустили не двигаясь — это клик. Куда именно, решаем по тому,
+     * с чего начали: событие click во время захвата указателя уходит на <svg>,
+     * а не на узел, поэтому на него полагаться нельзя. */
+    const endDrag = () => {
+      if (drag && !drag.moved) {
+        const n = drag.nodeId && net.byId.get(drag.nodeId);
+        if (n) handlers.onNodeClick && handlers.onNodeClick(n);
+        else handlers.onBackgroundClick && handlers.onBackgroundClick();
+      }
+      drag = null;
+    };
     svg.addEventListener('pointerup', endDrag); svg.addEventListener('pointercancel', endDrag);
     svg.addEventListener('wheel', (e) => { e.preventDefault(); zoomAt(e.deltaY < 0 ? 1 / 1.15 : 1.15, e.clientX, e.clientY); }, { passive: false });
     function zoomAt(f, cx, cy) {

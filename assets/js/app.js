@@ -75,7 +75,8 @@ SW.mount = function (container, options) {
         <form id="sw-form" class="sw-form" autocomplete="off">
           <p class="sw-lead">Сообщите давление на вводе в дом — схема сравнит его с расчётным и покажет, где в сети перекос.</p>
           <label>Адрес
-            <input name="address" list="sw-addr" placeholder="ул. Сиреневая, 17" required>
+            <input name="address" list="sw-addr" placeholder="с17 или Сиреневая 17" required>
+            <span class="sw-opt">можно коротко: первая буква улицы и номер дома — «с17», «в12», «к4»</span>
             <datalist id="sw-addr">${net.houses.map((h) => `<option value="${esc(h.address)}">`).join('')}</datalist>
           </label>
           <label>Давление по манометру, бар
@@ -360,10 +361,10 @@ SW.mount = function (container, options) {
   $('#sw-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const f = e.target; const msg = $('#sw-form-msg');
-    const addr = f.address.value.trim().toLowerCase().replace(/\s+/g, ' ');
-    const house = net.houses.find((h) => h.address.toLowerCase() === addr) || net.houses.find((h) => addr && (h.address.toLowerCase().endsWith(', ' + addr) || h.address.toLowerCase().includes(addr)));
+    const parsed = SW.parseAddress(f.address.value, net.houses);
+    const house = parsed.house;
     const pressure = Number(String(f.pressure.value).replace(',', '.'));
-    if (!house) { msg.className = 'sw-form-msg is-err'; msg.textContent = 'Такого адреса нет в схеме. Выберите адрес из списка или нажмите на дом на схеме.'; return; }
+    if (!house) { msg.className = 'sw-form-msg is-err'; msg.textContent = SW.addressError(parsed); return; }
     if (!isFinite(pressure) || pressure < 0 || pressure > 10) { msg.className = 'sw-form-msg is-err'; msg.textContent = 'Давление укажите в барах, от 0 до 10.'; return; }
     const r = await store.add({ houseId: house.id, address: house.address, pressure, comment: f.comment.value.trim() });
     state.selected = house.id; render();

@@ -76,7 +76,7 @@ SW.mount = function (container, options) {
           <p class="sw-lead">Сообщите давление на вводе в дом — схема сравнит его с расчётным и покажет, где в сети перекос.</p>
           <label>Адрес
             <input name="address" list="sw-addr" placeholder="с17 или Сиреневая 17" required>
-            <span class="sw-opt">можно коротко: первая буква улицы и номер дома — «с17», «в12», «к4»</span>
+            <span class="sw-opt">можно коротко: первая буква улицы и номер дома — «с17», «в12»</span>
             <datalist id="sw-addr">${net.houses.map((h) => `<option value="${esc(h.address)}">`).join('')}</datalist>
           </label>
           <label>Давление по манометру, бар

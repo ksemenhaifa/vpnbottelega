@@ -40,7 +40,7 @@ SW.defaultConfig = {
    * curveK — снижение напора насоса с расходом, м / (л/с)² */
   wells: [
     { id: 'W1', name: 'Скважина №1', x: -80,  y: 120, z: 3.0, pressure: 4.0, curveK: 0.04, connectTo: 'A0',  pipe: { d: 110, length: 45, material: 'ПЭ' } },
-    { id: 'W2', name: 'Скважина №2', x: 1040, y: 420, z: 5.5, pressure: 3.8, curveK: 0.04, connectTo: ['B24', 'C24'], pipe: { d: 110, length: 45, material: 'ПЭ' } },
+    { id: 'W2', name: 'Скважина №2', x: 1040, y: 420, z: 5.5, pressure: 3.8, curveK: 0.04, connectTo: 'B24', pipe: { d: 110, length: 45, material: 'ПЭ' } },
     { id: 'W3', name: 'Скважина №3', x: 480,  y: 270, z: 4.0, pressure: 4.0, curveK: 0.06, connectTo: ['A12', 'B12'], pipe: { d: 90, length: 150, material: 'ПЭ' } },
   ],
 
@@ -54,17 +54,11 @@ SW.defaultConfig = {
     { id: 'B', name: 'ул. Вишнёвая',     y: 420, x0: 0, x1: 960, step: 40,
       main: { d: 90, material: 'ПЭ' },  branch: { d: 32, material: 'ПЭ', length: 22 },
       sides: [-55, 55], skipSlots: [0, 9, 26, 33, 44], elevation: [4.0, 6.0] },
-    /* ВНИМАНИЕ: геометрия Каштановой — заглушка по образцу соседних улиц.
-     * Подставьте реальные длину, шаг, диаметр магистрали и отметки земли. */
-    { id: 'C', name: 'ул. Каштановая',   y: 720, x0: 0, x1: 960, step: 40,
-      main: { d: 90, material: 'ПЭ' },  branch: { d: 32, material: 'ПЭ', length: 22 },
-      sides: [-55, 55], skipSlots: [5, 17, 30, 41], elevation: [4.5, 7.5] },
   ],
 
   /* Перемычки между улицами. valve: true — можно закрыть в сценариях */
   links: [
     { id: 'L-end', name: 'Перемычка (восток)', from: 'A24', to: 'B24', d: 63, material: 'ПЭ', length: 300, valve: true, open: true },
-    { id: 'L-bc', name: 'Перемычка Вишнёвая–Каштановая', from: 'B12', to: 'C12', d: 63, material: 'ПЭ', length: 300, valve: true, open: true },
   ],
 };
 

@@ -1,6 +1,8 @@
 /* ============================================================
  *  Сборка приложения: SW.mount(container, options)
- *  options: { config, apiUrl, storageKey, hour, readOnly }
+ *  options: { config, apiUrl, storageKey, hour, readOnly, refreshMs }
+ *    refreshMs — период автообновления журнала с сервера, мс (по умолчанию 25000,
+ *                0 — выключить). Работает только при заданном apiUrl.
  * ============================================================ */
 window.SW = window.SW || {};
 
@@ -32,6 +34,7 @@ SW.mount = function (container, options) {
     <div class="sw-title">
       <h1>${esc(cfg.title)}</h1>
       <div class="sw-sub">${net.wells.length} скважины · ${net.streets.length} магистрали · ${net.houses.length} домовладений · расчётная схема по Хазену-Вильямсу</div>
+      <button type="button" class="sw-sync" id="sw-sync" hidden></button>
     </div>
     <div class="sw-stats" id="sw-stats"></div>
   </header>
@@ -376,7 +379,41 @@ SW.mount = function (container, options) {
   });
   $('#sw-clear').addEventListener('click', () => { if (confirm('Удалить все показания?')) store.clear(); });
   $('#sw-demo').addEventListener('click', seedDemo);
-  store.onChange(() => render());
+  /* ---------- Автообновление журнала ---------- */
+  const syncEl = $('#sw-sync');
+  let knownIds = null, syncTicker = null;
+
+  const agoText = (ts) => {
+    const sec = Math.max(0, Math.round((Date.now() - ts) / 1000));
+    if (sec < 15) return 'только что';
+    if (sec < 60) return sec + ' с назад';
+    const min = Math.round(sec / 60);
+    return min < 60 ? min + ' мин назад' : Math.round(min / 60) + ' ч назад';
+  };
+  function renderSync() {
+    if (store.mode !== 'api') return;
+    const st = store.status();
+    let cls = 'ok', text;
+    if (!st.polling) { cls = 'off'; text = 'автообновление выключено'; }
+    else if (st.state === 'error') { cls = 'err'; text = 'нет связи с сервером'; }
+    else if (st.state === 'loading' || !st.lastSync) { cls = 'load'; text = 'обновление…'; }
+    else text = 'обновлено ' + agoText(st.lastSync);
+    if (st.pending) { cls = cls === 'ok' ? 'warn' : cls; text += ` · ${st.pending} не отправлено`; }
+    syncEl.className = 'sw-sync is-' + cls;
+    syncEl.textContent = text;
+    syncEl.title = st.polling ? 'Выключить автообновление' : 'Включить автообновление';
+    syncEl.setAttribute('aria-label', 'Состояние связи с сервером: ' + text);
+  }
+
+  store.onChange((list, reason) => {
+    if (reason === 'remote' && knownIds) {
+      const fresh = list.filter((r) => !knownIds.has(r.id) && !r.demo);
+      if (fresh.length === 1) toast(`Новое показание: ${fresh[0].address} — ${fmt(fresh[0].pressure, 1)} бар`);
+      else if (fresh.length > 1) toast(`Новых показаний: ${fresh.length}`);
+    }
+    knownIds = new Set(list.map((r) => r.id));
+    render();
+  });
 
   /* Демонстрационные показания: помечены как «пример» */
   async function seedDemo() {
@@ -401,8 +438,25 @@ SW.mount = function (container, options) {
   showTab(state.tab);
   render();
   store.refresh().then(() => { if (!store.list().length && options.seedDemo !== false) seedDemo(); });
+
+  const refreshMs = options.refreshMs != null ? Number(options.refreshMs) : 25000;
+  if (store.mode === 'api' && refreshMs > 0) {
+    syncEl.hidden = false;
+    store.onStatus(renderSync);
+    syncEl.addEventListener('click', () => {
+      if (store.status().polling) { store.stopPolling(); toast('Автообновление выключено'); }
+      else { store.startPolling(refreshMs); store.refresh(); toast('Автообновление включено'); }
+      renderSync();
+    });
+    store.startPolling(refreshMs);
+    syncTicker = setInterval(renderSync, 10000);   // «N мин назад» без обращений к сети
+    renderSync();
+  }
   if (window.matchMedia) { const mq = window.matchMedia('(prefers-color-scheme: dark)'); (mq.addEventListener || mq.addListener).call(mq, mq.addEventListener ? 'change' : render, render); }
   new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
-  return { net, state, store, render, solve: () => solution, showTab };
+  return {
+    net, state, store, render, solve: () => solution, showTab,
+    destroy() { clearInterval(syncTicker); store.destroy(); },
+  };
 };

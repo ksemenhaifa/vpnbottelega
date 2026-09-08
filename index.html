@@ -18,11 +18,27 @@
 <script src="assets/js/profile.js"></script>
 <script src="assets/js/app.js"></script>
 <script>
-  // apiUrl: '/api/readings' — общий журнал показаний через server/server.mjs.
-  // Без apiUrl показания хранятся только в браузере пользователя.
-  SW.mount(document.getElementById('water-scheme'), {
-    apiUrl: location.protocol.startsWith('http') && location.port === '8080' ? '/api/readings' : undefined,
-  });
+  // Общий журнал показаний доступен, если рядом со страницей отвечает API
+  // (server/server.mjs — напрямую или за обратным прокси). Путь относительный,
+  // поэтому схема работает и в подкаталоге сайта.
+  // Если API нет (GitHub Pages, открытый файл), показания хранятся в браузере.
+  (async () => {
+    let apiUrl;
+    if (location.protocol.startsWith('http')) {
+      const url = new URL('api/readings', location.href);
+      const ctl = new AbortController();
+      const t = setTimeout(() => ctl.abort(), 4000);
+      try {
+        const res = await fetch(url, { signal: ctl.signal });
+        if (res.ok) apiUrl = url.pathname;
+      } catch (e) { /* API рядом нет — работаем на локальной копии */ }
+      clearTimeout(t);
+    }
+    SW.mount(document.getElementById('water-scheme'), {
+      apiUrl,           // общий журнал показаний
+      refreshMs: 25000, // период автообновления; 0 — выключить
+    });
+  })();
 </script>
 </body>
 </html>

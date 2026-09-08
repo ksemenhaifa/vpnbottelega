@@ -1,0 +1,26 @@
+[Unit]
+Description=Стрижи · Водоснабжение — интерактивная схема сети
+After=network.target
+
+[Service]
+Type=simple
+User=strizhi
+WorkingDirectory=/opt/strizhi-water
+ExecStart=/usr/bin/node /opt/strizhi-water/server/server.mjs
+Environment=PORT=8080
+Environment=HOST=127.0.0.1
+Environment=DATA_DIR=/var/lib/strizhi-water
+Environment=TRUST_PROXY=1
+Environment=RATE_LIMIT=30
+Restart=always
+RestartSec=3
+
+# Изоляция
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/strizhi-water
+
+[Install]
+WantedBy=multi-user.target

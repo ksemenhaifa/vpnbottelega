@@ -126,7 +126,7 @@ SW.mount = function (container, options) {
   /* ---------- Схема и профиль ---------- */
   const scheme = SW.scheme.create(canvas, net, {
     onNodeClick(n) {
-      if (n.type === 'house') { state.selected = state.selected === n.id ? null : n.id; if (state.selected) { $('#sw-form [name=address]').value = n.address; showTab('report'); revealForm(); } }
+      if (n.type === 'house') { selectHouse(n.id); }
       else if (n.type === 'well') { showTab('scenario'); }
       render();
     },
@@ -142,7 +142,7 @@ SW.mount = function (container, options) {
       tip.style.left = left + 'px'; tip.style.top = top + 'px';
     },
   });
-  const profile = SW.profile.create($('#sw-profile'), net, { onHouseClick(h) { state.selected = h.id; scheme.focusNode(h.id); render(); } });
+  const profile = SW.profile.create($('#sw-profile'), net, { onHouseClick(h) { selectHouse(h.id); scheme.focusNode(h.id); } });
 
   function tooltipHtml(info) {
     if (info.kind === 'pipe') {
@@ -327,6 +327,19 @@ SW.mount = function (container, options) {
   }
 
   /* ---------- Управление ---------- */
+  /* Единственная точка выбора дома: откуда бы ни кликнули — по схеме,
+   * по высотному разрезу или по строке журнала — адрес сразу оказывается
+   * в форме ввода показания. */
+  function selectHouse(id, opts) {
+    const h = net.byId.get(id);
+    if (!h || h.type !== 'house') return;
+    state.selected = id;
+    const field = $('#sw-form [name=address]');
+    if (field) field.value = h.address;
+    if (!(opts && opts.keepTab)) { showTab('report'); revealForm(); }
+    render();
+  }
+
   /* На узком экране панель уезжает под схему, и клик по дому выглядит как
    * «ничего не произошло». Подводим форму к глазам и ставим курсор в поле. */
   function revealForm() {
@@ -412,7 +425,7 @@ SW.mount = function (container, options) {
   });
   $('#sw-log').addEventListener('click', (e) => {
     const del = e.target.closest('[data-del]'); if (del) { store.remove(del.dataset.del); return; }
-    const row = e.target.closest('tr[data-house]'); if (row) { state.selected = row.dataset.house; scheme.focusNode(row.dataset.house); render(); }
+    const row = e.target.closest('tr[data-house]'); if (row) { selectHouse(row.dataset.house, { keepTab: true }); scheme.focusNode(row.dataset.house); }
   });
   $('#sw-clear').addEventListener('click', () => { if (confirm('Удалить все показания?')) store.clear(); });
   $('#sw-demo').addEventListener('click', seedDemo);

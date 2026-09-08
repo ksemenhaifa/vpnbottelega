@@ -56,6 +56,7 @@ SW.mount = function (container, options) {
           <button class="sw-btn" id="sw-zin" aria-label="Приблизить">+</button>
           <button class="sw-btn" id="sw-zout" aria-label="Отдалить">−</button>
           <button class="sw-btn sw-ghost" id="sw-fit">вся схема</button>
+          <button class="sw-btn sw-ghost" id="sw-theme" aria-label="Цветовая схема"></button>
         </div>
       </div>
       <div class="sw-canvas" id="sw-canvas">
@@ -125,7 +126,7 @@ SW.mount = function (container, options) {
   /* ---------- Схема и профиль ---------- */
   const scheme = SW.scheme.create(canvas, net, {
     onNodeClick(n) {
-      if (n.type === 'house') { state.selected = state.selected === n.id ? null : n.id; if (state.selected) { $('#sw-form [name=address]').value = n.address; showTab('report'); } }
+      if (n.type === 'house') { state.selected = state.selected === n.id ? null : n.id; if (state.selected) { $('#sw-form [name=address]').value = n.address; showTab('report'); revealForm(); } }
       else if (n.type === 'well') { showTab('scenario'); }
       render();
     },
@@ -326,6 +327,36 @@ SW.mount = function (container, options) {
   }
 
   /* ---------- Управление ---------- */
+  /* На узком экране панель уезжает под схему, и клик по дому выглядит как
+   * «ничего не произошло». Подводим форму к глазам и ставим курсор в поле. */
+  function revealForm() {
+    const side = container.querySelector('.sw-side');
+    if (!side || side.getBoundingClientRect().top < window.innerHeight - 80) {
+      const f = $('#sw-form [name=pressure]'); if (f) f.focus({ preventScroll: true });
+      return;
+    }
+    side.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => { const f = $('#sw-form [name=pressure]'); if (f) f.focus({ preventScroll: true }); }, 350);
+  }
+
+  /* Цветовая схема: авто (как в системе) → день → ночь. */
+  const THEMES = [
+    { id: 'auto',  label: 'авто',  title: 'Цвета как в системе' },
+    { id: 'light', label: 'день',  title: 'Светлая схема' },
+    { id: 'dark',  label: 'ночь',  title: 'Тёмная схема' },
+  ];
+  function readTheme() {
+    try { return localStorage.getItem('sw-theme') || 'auto'; } catch (e) { return 'auto'; }
+  }
+  function applyTheme(id) {
+    const t = THEMES.find((x) => x.id === id) || THEMES[0];
+    if (t.id === 'auto') delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = t.id;
+    try { localStorage.setItem('sw-theme', t.id); } catch (e) { /* приватный режим */ }
+    const b = $('#sw-theme');
+    if (b) { b.textContent = t.label; b.title = t.title; }
+  }
+
   function showTab(id) {
     state.tab = id;
     container.querySelectorAll('.sw-tabs [role=tab]').forEach((b) => b.setAttribute('aria-selected', b.dataset.tab === id));
@@ -341,6 +372,11 @@ SW.mount = function (container, options) {
   function toast(msg) { const t = $('#sw-toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3500); }
 
   container.querySelectorAll('.sw-tabs [role=tab]').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
+  applyTheme(readTheme());
+  $('#sw-theme').addEventListener('click', () => {
+    const i = THEMES.findIndex((t) => t.id === readTheme());
+    applyTheme(THEMES[(i + 1) % THEMES.length].id);
+  });
   container.querySelectorAll('.sw-seg [data-mode]').forEach((b) => b.addEventListener('click', () => { state.mode = b.dataset.mode; container.querySelectorAll('.sw-seg [data-mode]').forEach((x) => x.classList.toggle('is-on', x === b)); render(); }));
   $('#sw-hour').addEventListener('input', (e) => { state.hour = Number(e.target.value); render(); });
   $('#sw-now').addEventListener('click', () => { const d = new Date(); state.hour = d.getHours() + d.getMinutes() / 60; render(); });

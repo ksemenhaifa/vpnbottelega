@@ -6,6 +6,37 @@
  * ============================================================ */
 window.SW = window.SW || {};
 
+/* Заставка на время запуска. Живёт поверх контейнера, а не всего окна,
+ * чтобы модуль, встроенный в чужую страницу, не перекрывал её целиком.
+ * splash: false — выключить. */
+function showSplash(container, options) {
+  if (options && options.splash === false) return;
+  const el = document.createElement('div');
+  el.className = 'sw-splash';
+  el.setAttribute('aria-hidden', 'true');
+  el.innerHTML = '<svg class="sw-splash-drop" width="40" height="40" viewBox="0 0 40 40" fill="currentColor" aria-hidden="true">'
+    + '<path d="M20 4C25 12 30 17 30 23a10 10 0 0 1-20 0c0-6 5-11 10-19Z"/></svg>'
+    + '<div class="sw-splash-t">Стрижи · Водоснабжение</div>'
+    + '<div class="sw-splash-s">СХЕМА СЕТИ И ПОКАЗАНИЯ</div>'
+    + '<div class="sw-splash-bar"><i></i></div>'
+    + '<div class="sw-splash-by">Created by Semen Kuzminov</div>';
+  let gone = false;
+  const drop = () => { if (gone) return; gone = true; el.classList.add('is-out'); setTimeout(() => el.remove(), 500); };
+  el.addEventListener('click', drop);
+  const hold = setTimeout(drop, 1400);
+  /* Схема готова раньше — всё равно даём заставке долежать около секунды,
+   * иначе она мигает и выглядит сбоем. */
+  container.__swSplashDone = () => { clearTimeout(hold); setTimeout(drop, 1000); };
+  /* Во вкладке, открытой в фоне, таймеры притормаживаются, и заставка может
+   * задержаться. Как только на страницу посмотрели — убираем. */
+  document.addEventListener('visibilitychange', function onVis() {
+    if (document.visibilityState !== 'visible') return;
+    document.removeEventListener('visibilitychange', onVis);
+    setTimeout(drop, 600);
+  });
+  container.appendChild(el);
+}
+
 SW.mount = function (container, options) {
   options = options || {};
   const cfg = options.config || SW.defaultConfig;
@@ -119,6 +150,8 @@ SW.mount = function (container, options) {
     </aside>
   </div>
   <div class="sw-toast" id="sw-toast" role="status" aria-live="polite" hidden></div>`;
+
+  showSplash(container, options);
 
   const $ = (sel) => container.querySelector(sel);
   const canvas = $('#sw-canvas'), tip = $('#sw-tip');
@@ -352,14 +385,14 @@ SW.mount = function (container, options) {
     setTimeout(() => { const f = $('#sw-form [name=pressure]'); if (f) f.focus({ preventScroll: true }); }, 350);
   }
 
-  /* Цветовая схема: авто (как в системе) → день → ночь. */
+  /* Цветовая схема: ночь по умолчанию, дальше по кругу день и «как в системе». */
   const THEMES = [
-    { id: 'auto',  label: 'авто',  title: 'Цвета как в системе' },
-    { id: 'light', label: 'день',  title: 'Светлая схема' },
     { id: 'dark',  label: 'ночь',  title: 'Тёмная схема' },
+    { id: 'light', label: 'день',  title: 'Светлая схема' },
+    { id: 'auto',  label: 'авто',  title: 'Цвета как в системе' },
   ];
   function readTheme() {
-    try { return localStorage.getItem('sw-theme') || 'auto'; } catch (e) { return 'auto'; }
+    try { return localStorage.getItem('sw-theme') || 'dark'; } catch (e) { return 'dark'; }
   }
   function applyTheme(id) {
     const t = THEMES.find((x) => x.id === id) || THEMES[0];
@@ -487,7 +520,9 @@ SW.mount = function (container, options) {
   /* ---------- Старт ---------- */
   showTab(state.tab);
   render();
-  store.refresh().then(() => { if (!store.list().length && options.seedDemo !== false) seedDemo(); });
+  store.refresh()
+    .then(() => { if (!store.list().length && options.seedDemo !== false) seedDemo(); })
+    .finally(() => { if (container.__swSplashDone) container.__swSplashDone(); });
 
   const refreshMs = options.refreshMs != null ? Number(options.refreshMs) : 25000;
   if (store.mode === 'api' && refreshMs > 0) {

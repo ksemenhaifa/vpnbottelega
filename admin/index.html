@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Стрижи · параметры сети</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../assets/css/scheme.css">
+<style>
+  body { margin: 0; background: var(--page); color: var(--ink); font-family: var(--font); }
+  .ad-wrap { max-width: 980px; margin: 0 auto; padding: 22px 20px 90px; }
+
+  .ad-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 18px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+  .ad-head h1 { font-size: 22px; margin: 0; font-weight: 600; }
+  .ad-head .back { margin-left: auto; font-size: 14px; color: var(--blue); }
+  .ad-sub { color: var(--muted); font-size: 14px; margin: 12px 0 0; max-width: 78ch; line-height: 1.55; }
+
+  .ad-src { font-family: var(--mono); font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+  .ad-src b { color: var(--ink); font-weight: 500; }
+
+  h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-2);
+       margin: 34px 0 10px; padding-bottom: 7px; border-bottom: 1px solid var(--border); font-weight: 600; }
+  .hint { color: var(--muted); font-size: 13px; line-height: 1.5; margin: 0 0 12px; max-width: 78ch; }
+
+  .grid { display: grid; gap: 10px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .card-t { font-weight: 600; font-size: 14px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+  .card-t .tag { font-family: var(--mono); font-size: 11px; color: var(--muted); border: 1px solid var(--border);
+                 border-radius: 4px; padding: 1px 6px; }
+
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 10px 14px; }
+  label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--muted); }
+  label span.u { color: var(--axis); }
+  input, select {
+    font: inherit; font-size: 14px; font-family: var(--mono); padding: 7px 9px;
+    background: var(--surface-2); color: var(--ink); border: 1px solid var(--border); border-radius: 6px;
+  }
+  input:focus-visible, select:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+  input.wide { font-family: var(--font); }
+
+  .bar { position: sticky; bottom: 0; margin-top: 30px; padding: 14px 0; background: var(--page);
+         border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .btn { font: inherit; font-size: 14px; padding: 9px 16px; border-radius: 7px; border: 1px solid var(--border);
+         background: var(--surface-2); color: var(--ink); cursor: pointer; }
+  .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 600; }
+  .btn.danger { color: var(--red); }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .msg { font-size: 13.5px; line-height: 1.45; }
+  .msg.ok { color: var(--good-text); }
+  .msg.err { color: var(--red); }
+
+  .warn { border-left: 3px solid var(--warning); background: var(--surface); padding: 12px 14px;
+          border-radius: 0 8px 8px 0; font-size: 13.5px; line-height: 1.55; color: var(--ink-2); margin: 10px 0 0; }
+</style>
+</head>
+<body>
+<div class="ad-wrap">
+
+  <header class="ad-head">
+    <h1>Параметры сети</h1>
+    <a class="back" href="../">← к схеме</a>
+  </header>
+  <p class="ad-sub">Здесь задаются реальные данные посёлка: трубы, скважины, нормативы. Схема пересчитывает
+    давление по этим числам, поэтому чем они точнее, тем ближе расчёт к тому, что жители видят на манометрах.</p>
+  <p class="ad-src" id="src"></p>
+
+  <form id="f">
+    <h2>Нормативы</h2>
+    <p class="hint">Давление у потребителя считается нормой в этом диапазоне. Отклонение — насколько показание
+      жителя может разойтись с расчётом, прежде чем схема поднимет тревогу.</p>
+    <div class="card"><div class="row" id="norm"></div></div>
+
+    <h2>Скважины</h2>
+    <p class="hint">Давление на выходе меряется манометром на оголовке при малом разборе. Падение напора —
+      насколько просаживается насос под нагрузкой: если паспорта нет, оставьте как есть, это уточняется при
+      калибровке. Отметка — высота земли у скважины.</p>
+    <div class="grid" id="wells"></div>
+
+    <h2>Улицы</h2>
+    <p class="hint">Диаметр указывается наружный, как маркирована труба. Он влияет на расчёт сильнее всего:
+      ошибка в 10% даёт 60% ошибки в потерях напора. Отметки начала и конца улицы нужны с точностью около
+      полуметра — каждый метр высоты это 0,098 бар.</p>
+    <div class="grid" id="streets"></div>
+
+    <h2>Перемычки</h2>
+    <p class="hint">Соединения между улицами. Если на перемычке стоит задвижка и она закрыта — снимите галочку
+      «открыта», расчёт это учтёт.</p>
+    <div class="grid" id="links"></div>
+
+    <div class="warn" id="warn" hidden></div>
+
+    <div class="bar">
+      <button type="submit" class="btn primary" id="save">Сохранить и пересчитать</button>
+      <button type="button" class="btn" id="reload">Отменить правки</button>
+      <button type="button" class="btn danger" id="reset">Вернуть демо-модель</button>
+      <span class="msg" id="msg"></span>
+    </div>
+  </form>
+</div>
+
+<script src="../assets/js/config.js"></script>
+<script>
+(function () {
+  const $ = (s) => document.querySelector(s);
+  const API = new URL('../api/config', location.href).pathname;
+  const MATERIALS = ['ПЭ', 'ПНД', 'сталь', 'чугун', 'ПВХ'];
+  const DIAMETERS = [160, 110, 90, 63, 50, 40, 32, 25];
+  let cfg = null, saved = null;
+
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const num = (v) => (v === '' || v == null ? null : Number(String(v).replace(',', '.')));
+
+  function field(label, unit, path, value, attrs) {
+    const u = unit ? ` <span class="u">${esc(unit)}</span>` : '';
+    return `<label>${esc(label)}${u}<input data-p="${esc(path)}" value="${esc(value)}" ${attrs || ''}></label>`;
+  }
+  function select(label, path, value, list) {
+    const opts = list.map((v) => `<option value="${esc(v)}"${String(v) === String(value) ? ' selected' : ''}>${esc(v)}</option>`).join('');
+    return `<label>${esc(label)}<select data-p="${esc(path)}">${opts}</select></label>`;
+  }
+
+  function render() {
+    $('#norm').innerHTML =
+      field('Норма, от', 'бар', 'norm.min', cfg.norm.min, 'inputmode="decimal"') +
+      field('Норма, до', 'бар', 'norm.max', cfg.norm.max, 'inputmode="decimal"') +
+      field('Совпадение', 'бар', 'deviation.ok', cfg.deviation.ok, 'inputmode="decimal"') +
+      field('Тревога от', 'бар', 'deviation.warn', cfg.deviation.warn, 'inputmode="decimal"') +
+      field('Показание живёт', 'ч', 'readingTtlHours', cfg.readingTtlHours, 'inputmode="numeric"') +
+      field('Разбор на дом', 'л/с', 'houseDemand', cfg.houseDemand, 'inputmode="decimal"');
+
+    $('#wells').innerHTML = cfg.wells.map((w, i) => `
+      <div class="card">
+        <div class="card-t">${esc(w.name || w.id)} <span class="tag">${esc(w.id)}</span></div>
+        <div class="row">
+          ${field('Название', '', `wells.${i}.name`, w.name || '', 'class="wide"')}
+          ${field('Давление на выходе', 'бар', `wells.${i}.pressure`, w.pressure, 'inputmode="decimal"')}
+          ${field('Падение напора', 'м/(л/с)²', `wells.${i}.curveK`, w.curveK == null ? 0 : w.curveK, 'inputmode="decimal"')}
+          ${field('Отметка земли', 'м', `wells.${i}.z`, w.z, 'inputmode="decimal"')}
+          ${select('Труба, Ø мм', `wells.${i}.pipe.d`, w.pipe.d, DIAMETERS)}
+          ${field('Длина водовода', 'м', `wells.${i}.pipe.length`, w.pipe.length, 'inputmode="decimal"')}
+          ${select('Материал', `wells.${i}.pipe.material`, w.pipe.material, MATERIALS)}
+        </div>
+      </div>`).join('');
+
+    $('#streets').innerHTML = cfg.streets.map((s, i) => {
+      const houses = Math.round((s.x1 - s.x0) / s.step + 1) * 2 - (s.skipSlots || []).length;
+      return `
+      <div class="card">
+        <div class="card-t">${esc(s.name)} <span class="tag">${esc(s.id)} · ${houses} домов</span></div>
+        <div class="row">
+          ${field('Название', '', `streets.${i}.name`, s.name, 'class="wide"')}
+          ${field('Длина улицы', 'м', `streets.${i}.x1`, s.x1, 'inputmode="decimal"')}
+          ${field('Шаг между вводами', 'м', `streets.${i}.step`, s.step, 'inputmode="decimal"')}
+          ${select('Магистраль, Ø мм', `streets.${i}.main.d`, s.main.d, DIAMETERS)}
+          ${select('Материал магистрали', `streets.${i}.main.material`, s.main.material, MATERIALS)}
+          ${select('Ввод в дом, Ø мм', `streets.${i}.branch.d`, s.branch.d, DIAMETERS)}
+          ${field('Длина ввода', 'м', `streets.${i}.branch.length`, s.branch.length, 'inputmode="decimal"')}
+          ${field('Отметка в начале', 'м', `streets.${i}.elevation.0`, s.elevation[0], 'inputmode="decimal"')}
+          ${field('Отметка в конце', 'м', `streets.${i}.elevation.1`, s.elevation[1], 'inputmode="decimal"')}
+          ${field('Пустые участки', 'через запятую', `streets.${i}.skipSlots`, (s.skipSlots || []).join(', '), 'class="wide"')}
+        </div>
+      </div>`;
+    }).join('');
+
+    $('#links').innerHTML = (cfg.links || []).map((l, i) => `
+      <div class="card">
+        <div class="card-t">${esc(l.name || l.id)} <span class="tag">${esc(l.from)} → ${esc(l.to)}</span></div>
+        <div class="row">
+          ${field('Название', '', `links.${i}.name`, l.name || '', 'class="wide"')}
+          ${select('Ø мм', `links.${i}.d`, l.d, DIAMETERS)}
+          ${field('Длина', 'м', `links.${i}.length`, l.length, 'inputmode="decimal"')}
+          ${select('Материал', `links.${i}.material`, l.material, MATERIALS)}
+          <label>Задвижка открыта
+            <select data-p="links.${i}.open"><option value="1"${l.open !== false ? ' selected' : ''}>да</option><option value="0"${l.open === false ? ' selected' : ''}>нет</option></select>
+          </label>
+        </div>
+      </div>`).join('') || '<p class="hint">Перемычек в модели нет.</p>';
+  }
+
+  /* Собираем правки обратно в объект: путь вида streets.0.main.d */
+  function collect() {
+    const out = JSON.parse(JSON.stringify(cfg));
+    document.querySelectorAll('[data-p]').forEach((el) => {
+      const parts = el.dataset.p.split('.');
+      const key = parts.pop();
+      let o = out;
+      for (const p of parts) o = o[p];
+      const raw = el.value;
+      if (key === 'skipSlots') {
+        o[key] = raw.split(/[,\s]+/).map(Number).filter((n) => Number.isInteger(n) && n >= 0);
+      } else if (key === 'name' || key === 'material') {
+        o[key] = raw.trim();
+      } else if (key === 'open') {
+        o[key] = raw === '1';
+      } else {
+        const v = num(raw);
+        o[key] = v == null || !isFinite(v) ? 0 : v;
+      }
+    });
+    return out;
+  }
+
+  function say(text, cls) { const m = $('#msg'); m.textContent = text; m.className = 'msg ' + (cls || ''); }
+
+  function checkNumbering(next) {
+    /* Смена длины, шага или пустых участков перенумеровывает дома, и старые
+     * показания перестают к ним привязываться. Предупреждаем до сохранения. */
+    const changed = next.streets.some((s, i) => {
+      const was = saved.streets[i];
+      return !was || was.step !== s.step || was.x1 !== s.x1 || was.x0 !== s.x0 ||
+             String(was.skipSlots || []) !== String(s.skipSlots || []);
+    });
+    const w = $('#warn');
+    w.hidden = !changed;
+    if (changed) w.innerHTML = 'Вы меняете длину улицы, шаг между вводами или список пустых участков. ' +
+      'От этого зависит нумерация домов, поэтому <b>ранее внесённые показания могут отвязаться от домов</b>. ' +
+      'Адреса в журнале сохранятся, но подсветка на схеме сбросится. Лучше делать это до того, как жители начнут вносить данные.';
+  }
+
+  async function pull() {
+    let stored = {};
+    try {
+      const r = await fetch(API, { headers: { Accept: 'application/json' } });
+      if (r.ok) stored = await r.json();
+    } catch (e) { /* сервера нет — правим встроенную модель */ }
+    const useStored = stored && stored.streets;
+    cfg = JSON.parse(JSON.stringify(useStored ? stored : SW.defaultConfig));
+    saved = JSON.parse(JSON.stringify(cfg));
+    $('#src').innerHTML = useStored
+      ? 'Источник: <b>сохранённая модель посёлка</b>'
+      : 'Источник: <b>встроенная демо-модель</b> — правки ещё не сохранялись';
+    render();
+    $('#warn').hidden = true;
+    say('');
+  }
+
+  $('#f').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const next = collect();
+    checkNumbering(next);
+    $('#save').disabled = true;
+    say('Сохраняю…');
+    try {
+      const r = await fetch(API, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(next) });
+      if (r.status === 401 || r.status === 403) { say('Нет прав на запись. Войдите под администратором.', 'err'); return; }
+      const body = await r.json().catch(() => ({}));
+      if (!r.ok) { say('Не сохранено: ' + (body.error || r.status), 'err'); return; }
+      cfg = next; saved = JSON.parse(JSON.stringify(next));
+      $('#src').innerHTML = 'Источник: <b>сохранённая модель посёлка</b>';
+      render();
+      say('Сохранено. Схема пересчитает сеть при следующем открытии.', 'ok');
+    } catch (err) {
+      say('Сервер не ответил: ' + err.message, 'err');
+    } finally { $('#save').disabled = false; }
+  });
+
+  $('#reload').addEventListener('click', pull);
+
+  $('#reset').addEventListener('click', async () => {
+    if (!confirm('Удалить сохранённые параметры и вернуться к встроенной демо-модели?')) return;
+    try {
+      const r = await fetch(API, { method: 'DELETE' });
+      if (r.status === 401 || r.status === 403) { say('Нет прав на запись.', 'err'); return; }
+      await pull();
+      say('Вернулись к встроенной модели.', 'ok');
+    } catch (err) { say('Сервер не ответил: ' + err.message, 'err'); }
+  });
+
+  document.documentElement.dataset.theme = 'dark';
+  pull();
+})();
+</script>
+</body>
+</html>

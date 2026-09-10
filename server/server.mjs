@@ -2,7 +2,10 @@
  *  Минимальный сервер без зависимостей:
  *   · раздаёт статику проекта (index.html, assets/…)
  *   · API показаний: GET/POST /api/readings, DELETE /api/readings/:id
- *  Данные — в server/data/readings.json.
+ *   · API модели сети: GET/PUT/DELETE /api/config
+ *  Данные — в server/data/readings.json и config.json.
+ *  ВНИМАНИЕ: сервер не проверяет права. Запись в /api/config должен
+ *  закрывать обратный прокси (см. deploy/nginx.conf, limit_except GET).
  *  Запуск:  node server/server.mjs  [порт, по умолчанию 8080]
  *  Переменные окружения:
  *    PORT         порт (по умолчанию 8080)
@@ -20,6 +23,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(ROOT, 'server', 'data'));
 const DATA = path.join(DATA_DIR, 'readings.json');
+const CONFIG = path.join(DATA_DIR, 'config.json');
 const PORT = Number(process.argv[2] || process.env.PORT || 8080);
 const HOST = process.env.HOST || '0.0.0.0';
 const TRUST_PROXY = process.env.TRUST_PROXY === '1';
@@ -33,14 +37,45 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
 
 function load() { try { return JSON.parse(fs.readFileSync(DATA, 'utf8')); } catch (e) { return []; } }
 function save(list) { fs.mkdirSync(DATA_DIR, { recursive: true }); fs.writeFileSync(DATA, JSON.stringify(list, null, 1)); }
+/* Модель сети. Пустой ответ — значит правка не сохранялась и работает
+ * встроенная модель из assets/js/config.js. */
+function loadConfig() { try { return JSON.parse(fs.readFileSync(CONFIG, 'utf8')); } catch (e) { return null; } }
+function saveConfig(cfg) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  if (fs.existsSync(CONFIG)) fs.copyFileSync(CONFIG, CONFIG + '.bak');   // прошлая версия на случай ошибки
+  fs.writeFileSync(CONFIG, JSON.stringify(cfg, null, 1));
+}
+/* Проверяем ровно то, без чего расчёт развалится или выдаст бесконечность. */
+function validateConfig(c) {
+  if (!c || typeof c !== 'object') return 'не объект';
+  if (!Array.isArray(c.streets) || !c.streets.length) return 'нет улиц';
+  if (!Array.isArray(c.wells) || !c.wells.length) return 'нет скважин';
+  if (!c.norm || !(c.norm.min < c.norm.max)) return 'норма давления';
+  for (const s of c.streets) {
+    if (!s.id || !s.name) return 'улица без имени';
+    if (!(s.step > 0)) return `улица ${s.name}: шаг между вводами`;
+    if (!(s.x1 > s.x0)) return `улица ${s.name}: длина`;
+    if (!(s.main && s.main.d > 0)) return `улица ${s.name}: диаметр магистрали`;
+    if (!(s.branch && s.branch.d > 0 && s.branch.length > 0)) return `улица ${s.name}: ввод в дом`;
+    if (!Array.isArray(s.elevation) || s.elevation.length !== 2) return `улица ${s.name}: отметки`;
+    if ((s.x1 - s.x0) / s.step > 400) return `улица ${s.name}: слишком много узлов`;
+  }
+  for (const w of c.wells) {
+    if (!w.id) return 'скважина без имени';
+    if (!(w.pressure > 0 && w.pressure < 16)) return `скважина ${w.name || w.id}: давление 0–16 бар`;
+    if (!(w.pipe && w.pipe.d > 0 && w.pipe.length > 0)) return `скважина ${w.name || w.id}: водовод`;
+  }
+  return null;
+}
+
 function json(res, code, body) {
   res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Access-Control-Allow-Origin': CORS_ORIGIN,
-    'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' });
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' });
   res.end(body === undefined ? '' : JSON.stringify(body));
 }
 function readBody(req) {
   return new Promise((resolve, reject) => {
-    let s = ''; req.on('data', (c) => { s += c; if (s.length > 1e5) req.destroy(); });
+    let s = ''; req.on('data', (c) => { s += c; if (s.length > 1e6) req.destroy(); });
     req.on('end', () => { try { resolve(s ? JSON.parse(s) : {}); } catch (e) { reject(e); } });
     req.on('error', reject);
   });
@@ -92,6 +127,24 @@ http.createServer(async (req, res) => {
     }
     return json(res, 405, { error: 'method' });
   }
+  /* Модель сети. Читать может кто угодно из-за входа жителя, писать — только
+   * админ: доступ к PUT/DELETE ограничивает прокси, не этот код. */
+  if (url.pathname === '/api/config') {
+    if (req.method === 'GET') return json(res, 200, loadConfig() || {});
+    if (req.method === 'PUT') {
+      let body; try { body = await readBody(req); } catch (e) { return json(res, 400, { error: 'bad json' }); }
+      const bad = validateConfig(body);
+      if (bad) return json(res, 400, { error: bad });
+      saveConfig(body);
+      return json(res, 200, { ok: true });
+    }
+    if (req.method === 'DELETE') {                 // вернуться к встроенной модели
+      try { if (fs.existsSync(CONFIG)) { fs.copyFileSync(CONFIG, CONFIG + '.bak'); fs.unlinkSync(CONFIG); } } catch (e) { /* нечего удалять */ }
+      return json(res, 204);
+    }
+    return json(res, 405, { error: 'method' });
+  }
+
   // статика
   let rel; try { rel = decodeURIComponent(url.pathname === '/' ? '/index.html' : url.pathname); }
   catch (e) { res.writeHead(400); return res.end(); }

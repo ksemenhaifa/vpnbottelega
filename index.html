@@ -35,8 +35,19 @@
       } catch (e) { /* API рядом нет — работаем на локальной копии */ }
       clearTimeout(t);
     }
+    // Модель посёлка: правится в /admin/ и хранится на сервере.
+    // Если её там нет, работает встроенная демо-модель из config.js.
+    let config;
+    if (apiUrl) {
+      try {
+        const res = await fetch(new URL('api/config', location.href));
+        if (res.ok) { const c = await res.json(); if (c && c.streets) config = c; }
+      } catch (e) { /* не ответил — берём встроенную */ }
+    }
+
     SW.mount(document.getElementById('water-scheme'), {
       apiUrl,           // общий журнал показаний
+      config,           // модель сети с сервера, если сохранена
       refreshMs: 25000, // период автообновления; 0 — выключить
     });
   })();

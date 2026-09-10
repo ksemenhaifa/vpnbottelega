@@ -9,8 +9,9 @@ window.SW = window.SW || {};
 /* Заставка на время запуска. Живёт поверх контейнера, а не всего окна,
  * чтобы модуль, встроенный в чужую страницу, не перекрывал её целиком.
  * splash: false — выключить. */
-function showSplash(container, options) {
-  if (options && options.splash === false) return;
+function showSplash(container, options, manual) {
+  if (!manual && options && options.splash === false) return;
+  if (container.querySelector('.sw-splash')) return;
   const el = document.createElement('div');
   el.className = 'sw-splash';
   el.setAttribute('aria-hidden', 'true');
@@ -18,22 +19,32 @@ function showSplash(container, options) {
     + '<path d="M20 4C25 12 30 17 30 23a10 10 0 0 1-20 0c0-6 5-11 10-19Z"/></svg>'
     + '<div class="sw-splash-t">Стрижи · Водоснабжение</div>'
     + '<div class="sw-splash-s">СХЕМА СЕТИ И ПОКАЗАНИЯ</div>'
-    + '<div class="sw-splash-bar"><i></i></div>'
-    + '<div class="sw-splash-by">Created by Semen Kuzminov · web1.co.il</div>';
+    + (manual ? '' : '<div class="sw-splash-bar"><i></i></div>')
+    + '<div class="sw-splash-by">Created by Semen Kuzminov · web1.co.il</div>'
+    + (manual ? '<div class="sw-splash-tap">нажмите, чтобы вернуться к схеме</div>' : '');
   let gone = false;
   const drop = () => { if (gone) return; gone = true; el.classList.add('is-out'); setTimeout(() => el.remove(), 500); };
   el.addEventListener('click', drop);
-  const hold = setTimeout(drop, 1400);
+  const hold = manual ? null : setTimeout(drop, 1400);
   /* Схема готова раньше — всё равно даём заставке долежать около секунды,
    * иначе она мигает и выглядит сбоем. */
-  container.__swSplashDone = () => { clearTimeout(hold); setTimeout(drop, 1000); };
-  /* Во вкладке, открытой в фоне, таймеры притормаживаются, и заставка может
-   * задержаться. Как только на страницу посмотрели — убираем. */
-  document.addEventListener('visibilitychange', function onVis() {
-    if (document.visibilityState !== 'visible') return;
-    document.removeEventListener('visibilitychange', onVis);
-    setTimeout(drop, 600);
-  });
+  if (!manual) {
+    container.__swSplashDone = () => { clearTimeout(hold); setTimeout(drop, 1000); };
+    /* Во вкладке, открытой в фоне, таймеры притормаживаются, и заставка может
+     * задержаться. Как только на страницу посмотрели — убираем. */
+    document.addEventListener('visibilitychange', function onVis() {
+      if (document.visibilityState !== 'visible') return;
+      document.removeEventListener('visibilitychange', onVis);
+      setTimeout(drop, 600);
+    });
+  } else {
+    /* Открыли вручную — ждём, пока закроют, но Esc тоже работает. */
+    document.addEventListener('keydown', function onEsc(e) {
+      if (e.key !== 'Escape') return;
+      document.removeEventListener('keydown', onEsc);
+      drop();
+    });
+  }
   container.appendChild(el);
 }
 
@@ -64,7 +75,7 @@ SW.mount = function (container, options) {
   container.innerHTML = `
   <header class="sw-head">
     <div class="sw-title">
-      <h1>${esc(cfg.title)}</h1>
+      <h1 id="sw-h1" role="button" tabindex="0" title="Показать начальный экран">${esc(cfg.title)}</h1>
       <div class="sw-sub">${net.wells.length} скважины · ${net.streets.length} магистрали · ${net.houses.length} домовладений · расчётная схема по Хазену-Вильямсу</div>
       <button type="button" class="sw-sync" id="sw-sync" hidden></button>
     </div>
@@ -195,10 +206,14 @@ SW.mount = function (container, options) {
       именно из странных и находятся неисправности.</p>
     <div class="sw-help-foot">
       <div class="sw-by">
-        Схему сделал <b>${esc(author.name)}</b><br>
-        <a href="https://${esc(author.site)}" target="_blank" rel="noopener">${esc(author.site)}</a>
-        · <a href="https://wa.me/${esc(author.phone.replace(/\D/g, ''))}" target="_blank" rel="noopener">WhatsApp</a>
-        · <a href="tel:+${esc(author.phone.replace(/\D/g, ''))}">${esc(author.phone)}</a>
+        <b>Нужна такая же система под ваш объект?</b><br>
+        Проектирую и разрабатываю подобные решения под задачу — расчётные схемы инженерных сетей,
+        сбор данных с людей, отчётность. Обсудим, что нужно именно вам.<br>
+        <span class="sw-by-c">${esc(author.name)}
+          · <a href="https://${esc(author.site)}" target="_blank" rel="noopener">${esc(author.site)}</a>
+          · <a href="https://wa.me/${esc(author.phone.replace(/\D/g, ''))}" target="_blank" rel="noopener">WhatsApp</a>
+          · <a href="tel:+${esc(author.phone.replace(/\D/g, ''))}">${esc(author.phone)}</a>
+        </span>
       </div>
       <button type="button" class="sw-btn sw-primary" id="sw-help-ok">Понятно</button>
     </div>
@@ -473,6 +488,11 @@ SW.mount = function (container, options) {
   function toast(msg) { const t = $('#sw-toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3500); }
 
   container.querySelectorAll('.sw-tabs [role=tab]').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
+  const h1 = $('#sw-h1');
+  const openSplash = () => showSplash(container, options, true);
+  h1.addEventListener('click', openSplash);
+  h1.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openSplash(); } });
+
   const helpBox = $('#sw-help-box');
   const openHelp = () => { if (helpBox.showModal) helpBox.showModal(); else helpBox.setAttribute('open', ''); };
   const closeHelp = () => { if (helpBox.close) helpBox.close(); else helpBox.removeAttribute('open'); };

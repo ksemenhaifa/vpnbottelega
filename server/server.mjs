@@ -24,6 +24,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(ROOT, 'server', 'data'));
 const DATA = path.join(DATA_DIR, 'readings.json');
 const CONFIG = path.join(DATA_DIR, 'config.json');
+const CONFIG_LOG = path.join(DATA_DIR, 'config-log.jsonl');
+const MAX_LOG = 500;
 const PORT = Number(process.argv[2] || process.env.PORT || 8080);
 const HOST = process.env.HOST || '0.0.0.0';
 const TRUST_PROXY = process.env.TRUST_PROXY === '1';
@@ -45,6 +47,45 @@ function saveConfig(cfg) {
   if (fs.existsSync(CONFIG)) fs.copyFileSync(CONFIG, CONFIG + '.bak');   // прошлая версия на случай ошибки
   fs.writeFileSync(CONFIG, JSON.stringify(cfg, null, 1));
 }
+/* Разворачиваем модель в плоские пути вида streets.0.main.d — так видно,
+ * что именно поменялось, без хранения копии всего конфига на каждую правку. */
+function flat(o, prefix, out) {
+  out = out || {}; prefix = prefix || '';
+  if (o === null || typeof o !== 'object') { out[prefix] = o; return out; }
+  if (Array.isArray(o) && o.every((v) => v === null || typeof v !== 'object')) { out[prefix] = o.join(', '); return out; }
+  Object.keys(o).forEach((k) => flat(o[k], prefix ? prefix + '.' + k : k, out));
+  return out;
+}
+function diff(before, after) {
+  const a = flat(before || {}), b = flat(after || {});
+  const changes = [];
+  Object.keys(b).forEach((k) => { if (String(a[k]) !== String(b[k])) changes.push({ path: k, was: a[k] === undefined ? null : a[k], now: b[k] }); });
+  Object.keys(a).forEach((k) => { if (!(k in b)) changes.push({ path: k, was: a[k], now: null }); });
+  return changes;
+}
+function logAction(req, action, changes) {
+  const rec = {
+    ts: new Date().toISOString(),
+    user: String(req.headers['x-auth-user'] || '').slice(0, 64) || 'неизвестно',
+    ip: clientIp(req),
+    action,
+    changes: (changes || []).slice(0, 200),
+  };
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.appendFileSync(CONFIG_LOG, JSON.stringify(rec) + '\n');
+    /* Файл не должен расти без предела: держим последние MAX_LOG записей. */
+    const lines = fs.readFileSync(CONFIG_LOG, 'utf8').split('\n').filter(Boolean);
+    if (lines.length > MAX_LOG) fs.writeFileSync(CONFIG_LOG, lines.slice(-MAX_LOG).join('\n') + '\n');
+  } catch (e) { console.error('log:', e.message); }
+}
+function readLog() {
+  try {
+    return fs.readFileSync(CONFIG_LOG, 'utf8').split('\n').filter(Boolean)
+      .map((l) => { try { return JSON.parse(l); } catch (e) { return null; } }).filter(Boolean).reverse();
+  } catch (e) { return []; }
+}
+
 /* Проверяем ровно то, без чего расчёт развалится или выдаст бесконечность. */
 function validateConfig(c) {
   if (!c || typeof c !== 'object') return 'не объект';
@@ -129,17 +170,24 @@ http.createServer(async (req, res) => {
   }
   /* Модель сети. Читать может кто угодно из-за входа жителя, писать — только
    * админ: доступ к PUT/DELETE ограничивает прокси, не этот код. */
+  if (url.pathname === '/api/config/log') {
+    if (req.method === 'GET') return json(res, 200, readLog());
+    return json(res, 405, { error: 'method' });
+  }
   if (url.pathname === '/api/config') {
     if (req.method === 'GET') return json(res, 200, loadConfig() || {});
     if (req.method === 'PUT') {
       let body; try { body = await readBody(req); } catch (e) { return json(res, 400, { error: 'bad json' }); }
       const bad = validateConfig(body);
       if (bad) return json(res, 400, { error: bad });
+      const changes = diff(loadConfig(), body);
       saveConfig(body);
-      return json(res, 200, { ok: true });
+      logAction(req, 'правка модели', changes);
+      return json(res, 200, { ok: true, changed: changes.length });
     }
     if (req.method === 'DELETE') {                 // вернуться к встроенной модели
       try { if (fs.existsSync(CONFIG)) { fs.copyFileSync(CONFIG, CONFIG + '.bak'); fs.unlinkSync(CONFIG); } } catch (e) { /* нечего удалять */ }
+      logAction(req, 'возврат к демо-модели', []);
       return json(res, 204);
     }
     return json(res, 405, { error: 'method' });

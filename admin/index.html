@@ -4,8 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Стрижи · параметры сети</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="../assets/css/scheme.css">
 <style>
   body { margin: 0; background: var(--page); color: var(--ink); font-family: var(--font); }
@@ -52,6 +50,19 @@
 
   .warn { border-left: 3px solid var(--warning); background: var(--surface); padding: 12px 14px;
           border-radius: 0 8px 8px 0; font-size: 13.5px; line-height: 1.55; color: var(--ink-2); margin: 10px 0 0; }
+
+  .log { font-size: 13px; color: var(--muted); }
+  .log-rec { border-bottom: 1px solid var(--border); padding: 11px 0; }
+  .log-top { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+  .log-when { font-family: var(--mono); color: var(--ink-2); }
+  .log-who { color: var(--ink); font-weight: 600; }
+  .log-what { color: var(--muted); }
+  .log-ch { margin: 7px 0 0; padding: 0; list-style: none; display: grid; gap: 3px; }
+  .log-ch li { font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
+  .log-ch .p { color: var(--muted); }
+  .log-ch .was { color: var(--red); text-decoration: line-through; }
+  .log-ch .now { color: var(--good-text); }
+  .log-more { color: var(--muted); font-style: italic; }
 </style>
 </head>
 <body>
@@ -89,6 +100,10 @@
     <div class="grid" id="links"></div>
 
     <div class="warn" id="warn" hidden></div>
+
+    <h2>Журнал изменений</h2>
+    <p class="hint">Кто и когда правил модель. Хранятся последние 500 записей.</p>
+    <div id="log" class="log">загружаю…</div>
 
     <div class="bar">
       <button type="submit" class="btn primary" id="save">Сохранить и пересчитать</button>
@@ -250,10 +265,57 @@
       $('#src').innerHTML = 'Источник: <b>сохранённая модель посёлка</b>';
       render();
       say('Сохранено. Схема пересчитает сеть при следующем открытии.', 'ok');
+      pullLog();
     } catch (err) {
       say('Сервер не ответил: ' + err.message, 'err');
     } finally { $('#save').disabled = false; }
   });
+
+  /* Человеческие имена вместо streets.0.main.d */
+  function label(p) {
+    const parts = p.split('.');
+    const streetName = (i) => (cfg.streets[i] ? cfg.streets[i].name : 'улица ' + i);
+    const wellName = (i) => (cfg.wells[i] ? (cfg.wells[i].name || cfg.wells[i].id) : 'скважина ' + i);
+    const FIELD = {
+      'main.d': 'Ø магистрали', 'main.material': 'материал магистрали',
+      'branch.d': 'Ø ввода', 'branch.length': 'длина ввода', 'branch.material': 'материал ввода',
+      'step': 'шаг между вводами', 'x1': 'длина улицы', 'x0': 'начало улицы', 'name': 'название',
+      'elevation.0': 'отметка в начале', 'elevation.1': 'отметка в конце', 'skipSlots': 'пустые участки',
+      'pressure': 'давление на выходе', 'curveK': 'падение напора', 'z': 'отметка',
+      'pipe.d': 'Ø водовода', 'pipe.length': 'длина водовода', 'pipe.material': 'материал водовода',
+      'd': 'Ø', 'length': 'длина', 'material': 'материал', 'open': 'задвижка открыта',
+      'norm.min': 'норма, от', 'norm.max': 'норма, до', 'deviation.ok': 'порог совпадения',
+      'deviation.warn': 'порог тревоги', 'readingTtlHours': 'срок жизни показания', 'houseDemand': 'разбор на дом',
+    };
+    if (parts[0] === 'streets') return streetName(+parts[1]) + ' · ' + (FIELD[parts.slice(2).join('.')] || parts.slice(2).join('.'));
+    if (parts[0] === 'wells') return wellName(+parts[1]) + ' · ' + (FIELD[parts.slice(2).join('.')] || parts.slice(2).join('.'));
+    if (parts[0] === 'links') return 'перемычка ' + (+parts[1] + 1) + ' · ' + (FIELD[parts.slice(2).join('.')] || parts.slice(2).join('.'));
+    return FIELD[p] || p;
+  }
+
+  async function pullLog() {
+    const box = $('#log');
+    try {
+      const r = await fetch(new URL('../api/config/log', location.href).pathname);
+      if (!r.ok) { box.textContent = 'Журнал недоступен (' + r.status + ').'; return; }
+      const list = await r.json();
+      if (!list.length) { box.textContent = 'Изменений пока не было.'; return; }
+      box.innerHTML = list.map((r) => {
+        const when = new Date(r.ts).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+        const shown = (r.changes || []).slice(0, 12);
+        const rest = (r.changes || []).length - shown.length;
+        const items = shown.map((c) =>
+          `<li><span class="p">${esc(label(c.path))}:</span> <span class="was">${esc(c.was)}</span> → <span class="now">${esc(c.now)}</span></li>`).join('');
+        return `<div class="log-rec">
+            <div class="log-top"><span class="log-when">${esc(when)}</span>
+              <span class="log-who">${esc(r.user)}</span>
+              <span class="log-what">${esc(r.action)}${r.changes && r.changes.length ? ' · ' + r.changes.length + ' полей' : ''}</span></div>
+            ${items ? `<ul class="log-ch">${items}</ul>` : ''}
+            ${rest > 0 ? `<div class="log-more">…и ещё ${rest}</div>` : ''}
+          </div>`;
+      }).join('');
+    } catch (e) { box.textContent = 'Журнал не загрузился: ' + e.message; }
+  }
 
   $('#reload').addEventListener('click', pull);
 
@@ -263,12 +325,13 @@
       const r = await fetch(API, { method: 'DELETE' });
       if (r.status === 401 || r.status === 403) { say('Нет прав на запись.', 'err'); return; }
       await pull();
+      pullLog();
       say('Вернулись к встроенной модели.', 'ok');
     } catch (err) { say('Сервер не ответил: ' + err.message, 'err'); }
   });
 
   document.documentElement.dataset.theme = 'dark';
-  pull();
+  pull().then(pullLog);
 })();
 </script>
 </body>

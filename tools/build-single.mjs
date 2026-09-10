@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 const fragment = process.argv.includes('--fragment');
-const JS = ['assets/js/config.js', 'assets/js/hydraulics.js', 'assets/js/reports.js', 'assets/js/scheme.js', 'assets/js/profile.js', 'assets/js/app.js'];
+const JS = ['assets/js/config.js', 'assets/js/address.js', 'assets/js/hydraulics.js', 'assets/js/reports.js', 'assets/js/scheme.js', 'assets/js/profile.js', 'assets/js/app.js'];
 
 const body = `<title>Стрижи · Водоснабжение</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">

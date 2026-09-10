@@ -138,6 +138,7 @@ body { font: 14px/1.45 var(--font); }
 @keyframes sw-dash { to { stroke-dashoffset: -14; } }
 .sw-junction { fill: var(--axis); }
 .sw-node { cursor: pointer; }
+.sw-hit { fill: transparent; }
 .sw-house-body { stroke: var(--ink-2); stroke-width: 1; stroke-opacity: .55; transition: fill .3s; }
 .sw-house-body.is-empty { fill: none; stroke-dasharray: 2 2; }
 .sw-house-ring { fill: none; stroke: var(--ink); stroke-width: 0; }
@@ -411,6 +412,119 @@ SW.buildNetwork = function (cfg) {
   const pipeById = new Map(pipes.map((p) => [p.id, p]));
   return { cfg, nodes, pipes, houses, wells, streets, byId, pipeById };
 };
+
+/* ============================================================
+ *  Стрижи · Водоснабжение — разбор адреса, введённого жителем.
+ *
+ *  Житель пишет как ему удобно, всё это одно и то же:
+ *      в12   в 12   в-12   В12
+ *      вишневая 12   Вишнёвая, 12   ул. Вишнёвая д. 12   12 вишневая
+ *      viш… — латиница тоже: v12, d12 (та же клавиша в другой раскладке)
+ *
+ *  SW.parseAddress(текст, net.houses) → { house } либо { error, … }
+ *  SW.addressError(результат) → текст ошибки для жителя.
+ * ============================================================ */
+window.SW = window.SW || {};
+
+(function () {
+  /* Латиница, которой чаще всего промахиваются: та же клавиша в другой
+   * раскладке (в→d, с→c, к→r) и привычный транслит (v, s, k). */
+  const LAT = { d: 'в', v: 'в', b: 'в', c: 'с', s: 'с', r: 'к', k: 'к' };
+
+  const norm = (s) => String(s || '')
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/№/g, ' ')
+    .replace(/[.,\-—–_/\\"'()]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  /* Убираем слова-пустышки: «ул.», «улица», «дом», «д», «номер». */
+  const stripNoise = (s) => s
+    .replace(/(^|\s)(ул|улица|дом|д|номер|no)(\s|$)/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  /* Улицы вытаскиваем из самих домов, чтобы список нигде не дублировать:
+   * address у дома выглядит как «ул. Вишнёвая, 12». */
+  function streetsOf(houses) {
+    const map = new Map();
+    (houses || []).forEach((h) => {
+      if (!map.has(h.street)) {
+        map.set(h.street, {
+          id: h.street,
+          title: String(h.address || '').split(',')[0].trim(),
+          key: stripNoise(norm(String(h.address || '').split(',')[0])),
+          houses: [],
+        });
+      }
+      map.get(h.street).houses.push(h);
+    });
+    return Array.from(map.values());
+  }
+
+  SW.parseAddress = function (input, houses) {
+    const streets = streetsOf(houses);
+    const text = stripNoise(norm(input));
+    if (!text) return { error: 'empty', streets };
+
+    /* Номер дома — последнее число в строке: «12 вишневая» и
+     * «вишневая 12» разбираются одинаково. */
+    const nums = text.match(/\d+/g);
+    if (!nums) return { error: 'no-number', streets };
+    const number = Number(nums[nums.length - 1]);
+
+    /* Всё, что осталось после цифр, — название улицы. */
+    const letters = text
+      .replace(/\d+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .split(' ')
+      .map((w) => (w.length === 1 && LAT[w] ? LAT[w] : w))
+      .filter(Boolean)
+      .join(' ');
+
+    let cand = letters
+      ? streets.filter((st) => st.key.startsWith(letters) || letters.startsWith(st.key))
+      : streets.slice();
+
+    if (!cand.length) return { error: 'street-unknown', streets, letters };
+
+    /* Улицу не назвали или назвали неоднозначно — пробуем сузить по номеру:
+     * если такой дом есть только на одной улице, вопрос снимается сам. */
+    if (cand.length > 1) {
+      const withHouse = cand.filter((st) => st.houses.some((h) => h.number === number));
+      if (withHouse.length === 1) cand = withHouse;
+      else return { error: 'street-ambiguous', streets: withHouse.length ? withHouse : cand, number };
+    }
+
+    const street = cand[0];
+    const house = street.houses.find((h) => h.number === number);
+    if (!house) return { error: 'house-unknown', street, number };
+    return { house, street };
+  };
+
+  SW.addressError = function (res) {
+    const short = (t) => String(t || '').replace(/^ул\.?\s*/i, '');
+    const names = (res.streets || []).map((s) => short(s.title)).join(', ');
+    switch (res && res.error) {
+      case 'empty':
+        return 'Напишите адрес — например «в12» или «Вишнёвая 12».';
+      case 'no-number':
+        return 'Не вижу номера дома. Напишите, например, «в12» или «Вишнёвая 12».';
+      case 'street-unknown':
+        return `Такой улицы в посёлке нет. Есть: ${names}.`;
+      case 'street-ambiguous':
+        return `Дом ${res.number} есть на нескольких улицах: ${names}. Добавьте улицу — хватит первой буквы, например «${(res.streets[0].key || 'в')[0]}${res.number}».`;
+      case 'house-unknown': {
+        const nums = res.street.houses.map((h) => h.number).sort((a, b) => a - b);
+        return `На улице ${short(res.street.title)} нет дома ${res.number}. Здесь дома с ${nums[0]} по ${nums[nums.length - 1]}.`;
+      }
+      default:
+        return 'Не понял адрес. Напишите, например, «в12» или «Вишнёвая 12».';
+    }
+  };
+})();
 
 /* ============================================================
  *  Гидравлический расчёт сети (установившийся режим)
@@ -921,8 +1035,24 @@ SW.scheme = (function () {
     if (bg && bg.url) { xs.push(bg.x || 0, (bg.x || 0) + bg.width); ys.push(bg.y || 0, (bg.y || 0) + bg.height); }
     const bounds = { x: Math.min(...xs) - pad, y: Math.min(...ys) - pad - 10, w: Math.max(...xs) - Math.min(...xs) + pad * 2, h: Math.max(...ys) - Math.min(...ys) + pad * 2 + 10 };
     let view = Object.assign({}, bounds);
-    const applyView = () => svg.setAttribute('viewBox', `${view.x} ${view.y} ${view.w} ${view.h}`);
+    const hitEls = [];
+    /* Площадка попадания держится примерно постоянной на экране (~22 px),
+     * иначе на общем плане дома становятся неприцельными. */
+    let lastHitW = 0;
+    function updateHitAreas() {
+      const px = svg.clientWidth || svg.getBoundingClientRect().width || 1;
+      const half = Math.max(9, (view.w / px) * 11);
+      hitEls.forEach((r) => {
+        r.setAttribute('x', -half); r.setAttribute('y', -half);
+        r.setAttribute('width', half * 2); r.setAttribute('height', half * 2);
+      });
+    }
+    const applyView = () => {
+      svg.setAttribute('viewBox', `${view.x} ${view.y} ${view.w} ${view.h}`);
+      if (view.w !== lastHitW) { lastHitW = view.w; updateHitAreas(); }
+    };
     applyView();
+    window.addEventListener('resize', updateHitAreas);
 
     // Подложка улиц
     net.streets.forEach((s) => {
@@ -957,6 +1087,11 @@ SW.scheme = (function () {
         return;
       }
       const g = el('g', { class: `sw-node sw-${n.type}`, transform: `translate(${n.x} ${n.y})`, 'data-id': n.id, tabindex: 0, role: 'button' }, gNodes);
+      /* Невидимая площадка попадания: сам домик на общем плане — это 6 пикселей
+       * на экране, пальцем в него не попасть. Размер пересчитывается под
+       * текущий масштаб в updateHitAreas(). */
+      const hit = el('rect', { class: 'sw-hit' }, g);
+      hitEls.push(hit);
       let shape, halo, ring, badge;
       if (n.type === 'well') {
         halo = el('circle', { r: 26, class: 'sw-halo' }, g);
@@ -971,17 +1106,23 @@ SW.scheme = (function () {
         el('text', { x: 0, y: n.side === 0 ? -14 : 20, class: 'sw-house-num' }, g).textContent = n.number;
         badge = el('text', { x: 0, y: 3.2, class: 'sw-house-badge' }, g);
       }
-      g.addEventListener('click', (e) => { e.stopPropagation(); handlers.onNodeClick && handlers.onNodeClick(n); });
       g.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handlers.onNodeClick && handlers.onNodeClick(n); } });
       g.addEventListener('pointerenter', (e) => handlers.onHover && handlers.onHover({ kind: 'node', node: n }, e));
       g.addEventListener('pointerleave', () => handlers.onHover && handlers.onHover(null));
       nodeEls.set(n.id, { g, shape, halo, ring, badge });
     });
 
+    updateHitAreas();   // узлы уже созданы — задаём площадкам размер
+
     /* ---- Панорамирование и масштаб ---- */
     let drag = null;
     const toWorld = (cx, cy) => { const r = svg.getBoundingClientRect(); return [view.x + (cx - r.left) / r.width * view.w, view.y + (cy - r.top) / r.height * view.h]; };
-    svg.addEventListener('pointerdown', (e) => { if (e.button !== 0) return; drag = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, moved: false }; svg.setPointerCapture(e.pointerId); });
+    svg.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      const g = e.target.closest && e.target.closest('.sw-node');
+      drag = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, moved: false, nodeId: g ? g.getAttribute('data-id') : null };
+      svg.setPointerCapture(e.pointerId);
+    });
     svg.addEventListener('pointermove', (e) => {
       if (!drag) return;
       const r = svg.getBoundingClientRect();
@@ -989,7 +1130,17 @@ SW.scheme = (function () {
       if (Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) > 3) drag.moved = true;
       view.x = drag.vx - dx; view.y = drag.vy - dy; applyView();
     });
-    const endDrag = () => { if (drag && !drag.moved) handlers.onBackgroundClick && handlers.onBackgroundClick(); drag = null; };
+    /* Нажали и отпустили не двигаясь — это клик. Куда именно, решаем по тому,
+     * с чего начали: событие click во время захвата указателя уходит на <svg>,
+     * а не на узел, поэтому на него полагаться нельзя. */
+    const endDrag = () => {
+      if (drag && !drag.moved) {
+        const n = drag.nodeId && net.byId.get(drag.nodeId);
+        if (n) handlers.onNodeClick && handlers.onNodeClick(n);
+        else handlers.onBackgroundClick && handlers.onBackgroundClick();
+      }
+      drag = null;
+    };
     svg.addEventListener('pointerup', endDrag); svg.addEventListener('pointercancel', endDrag);
     svg.addEventListener('wheel', (e) => { e.preventDefault(); zoomAt(e.deltaY < 0 ? 1 / 1.15 : 1.15, e.clientX, e.clientY); }, { passive: false });
     function zoomAt(f, cx, cy) {
@@ -1246,6 +1397,7 @@ SW.mount = function (container, options) {
           <button class="sw-btn" id="sw-zin" aria-label="Приблизить">+</button>
           <button class="sw-btn" id="sw-zout" aria-label="Отдалить">−</button>
           <button class="sw-btn sw-ghost" id="sw-fit">вся схема</button>
+          <button class="sw-btn sw-ghost" id="sw-theme" aria-label="Цветовая схема"></button>
         </div>
       </div>
       <div class="sw-canvas" id="sw-canvas">
@@ -1265,7 +1417,8 @@ SW.mount = function (container, options) {
         <form id="sw-form" class="sw-form" autocomplete="off">
           <p class="sw-lead">Сообщите давление на вводе в дом — схема сравнит его с расчётным и покажет, где в сети перекос.</p>
           <label>Адрес
-            <input name="address" list="sw-addr" placeholder="ул. Сиреневая, 17" required>
+            <input name="address" list="sw-addr" placeholder="с17 или Сиреневая 17" required>
+            <span class="sw-opt">можно коротко: первая буква улицы и номер дома — «с17», «в12»</span>
             <datalist id="sw-addr">${net.houses.map((h) => `<option value="${esc(h.address)}">`).join('')}</datalist>
           </label>
           <label>Давление по манометру, бар
@@ -1314,7 +1467,7 @@ SW.mount = function (container, options) {
   /* ---------- Схема и профиль ---------- */
   const scheme = SW.scheme.create(canvas, net, {
     onNodeClick(n) {
-      if (n.type === 'house') { state.selected = state.selected === n.id ? null : n.id; if (state.selected) { $('#sw-form [name=address]').value = n.address; showTab('report'); } }
+      if (n.type === 'house') { selectHouse(n.id); }
       else if (n.type === 'well') { showTab('scenario'); }
       render();
     },
@@ -1330,7 +1483,7 @@ SW.mount = function (container, options) {
       tip.style.left = left + 'px'; tip.style.top = top + 'px';
     },
   });
-  const profile = SW.profile.create($('#sw-profile'), net, { onHouseClick(h) { state.selected = h.id; scheme.focusNode(h.id); render(); } });
+  const profile = SW.profile.create($('#sw-profile'), net, { onHouseClick(h) { selectHouse(h.id); scheme.focusNode(h.id); } });
 
   function tooltipHtml(info) {
     if (info.kind === 'pipe') {
@@ -1515,6 +1668,49 @@ SW.mount = function (container, options) {
   }
 
   /* ---------- Управление ---------- */
+  /* Единственная точка выбора дома: откуда бы ни кликнули — по схеме,
+   * по высотному разрезу или по строке журнала — адрес сразу оказывается
+   * в форме ввода показания. */
+  function selectHouse(id, opts) {
+    const h = net.byId.get(id);
+    if (!h || h.type !== 'house') return;
+    state.selected = id;
+    const field = $('#sw-form [name=address]');
+    if (field) field.value = h.address;
+    if (!(opts && opts.keepTab)) { showTab('report'); revealForm(); }
+    render();
+  }
+
+  /* На узком экране панель уезжает под схему, и клик по дому выглядит как
+   * «ничего не произошло». Подводим форму к глазам и ставим курсор в поле. */
+  function revealForm() {
+    const side = container.querySelector('.sw-side');
+    if (!side || side.getBoundingClientRect().top < window.innerHeight - 80) {
+      const f = $('#sw-form [name=pressure]'); if (f) f.focus({ preventScroll: true });
+      return;
+    }
+    side.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => { const f = $('#sw-form [name=pressure]'); if (f) f.focus({ preventScroll: true }); }, 350);
+  }
+
+  /* Цветовая схема: авто (как в системе) → день → ночь. */
+  const THEMES = [
+    { id: 'auto',  label: 'авто',  title: 'Цвета как в системе' },
+    { id: 'light', label: 'день',  title: 'Светлая схема' },
+    { id: 'dark',  label: 'ночь',  title: 'Тёмная схема' },
+  ];
+  function readTheme() {
+    try { return localStorage.getItem('sw-theme') || 'auto'; } catch (e) { return 'auto'; }
+  }
+  function applyTheme(id) {
+    const t = THEMES.find((x) => x.id === id) || THEMES[0];
+    if (t.id === 'auto') delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = t.id;
+    try { localStorage.setItem('sw-theme', t.id); } catch (e) { /* приватный режим */ }
+    const b = $('#sw-theme');
+    if (b) { b.textContent = t.label; b.title = t.title; }
+  }
+
   function showTab(id) {
     state.tab = id;
     container.querySelectorAll('.sw-tabs [role=tab]').forEach((b) => b.setAttribute('aria-selected', b.dataset.tab === id));
@@ -1530,6 +1726,11 @@ SW.mount = function (container, options) {
   function toast(msg) { const t = $('#sw-toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3500); }
 
   container.querySelectorAll('.sw-tabs [role=tab]').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
+  applyTheme(readTheme());
+  $('#sw-theme').addEventListener('click', () => {
+    const i = THEMES.findIndex((t) => t.id === readTheme());
+    applyTheme(THEMES[(i + 1) % THEMES.length].id);
+  });
   container.querySelectorAll('.sw-seg [data-mode]').forEach((b) => b.addEventListener('click', () => { state.mode = b.dataset.mode; container.querySelectorAll('.sw-seg [data-mode]').forEach((x) => x.classList.toggle('is-on', x === b)); render(); }));
   $('#sw-hour').addEventListener('input', (e) => { state.hour = Number(e.target.value); render(); });
   $('#sw-now').addEventListener('click', () => { const d = new Date(); state.hour = d.getHours() + d.getMinutes() / 60; render(); });
@@ -1550,10 +1751,10 @@ SW.mount = function (container, options) {
   $('#sw-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const f = e.target; const msg = $('#sw-form-msg');
-    const addr = f.address.value.trim().toLowerCase().replace(/\s+/g, ' ');
-    const house = net.houses.find((h) => h.address.toLowerCase() === addr) || net.houses.find((h) => addr && (h.address.toLowerCase().endsWith(', ' + addr) || h.address.toLowerCase().includes(addr)));
+    const parsed = SW.parseAddress(f.address.value, net.houses);
+    const house = parsed.house;
     const pressure = Number(String(f.pressure.value).replace(',', '.'));
-    if (!house) { msg.className = 'sw-form-msg is-err'; msg.textContent = 'Такого адреса нет в схеме. Выберите адрес из списка или нажмите на дом на схеме.'; return; }
+    if (!house) { msg.className = 'sw-form-msg is-err'; msg.textContent = SW.addressError(parsed); return; }
     if (!isFinite(pressure) || pressure < 0 || pressure > 10) { msg.className = 'sw-form-msg is-err'; msg.textContent = 'Давление укажите в барах, от 0 до 10.'; return; }
     const r = await store.add({ houseId: house.id, address: house.address, pressure, comment: f.comment.value.trim() });
     state.selected = house.id; render();
@@ -1565,7 +1766,7 @@ SW.mount = function (container, options) {
   });
   $('#sw-log').addEventListener('click', (e) => {
     const del = e.target.closest('[data-del]'); if (del) { store.remove(del.dataset.del); return; }
-    const row = e.target.closest('tr[data-house]'); if (row) { state.selected = row.dataset.house; scheme.focusNode(row.dataset.house); render(); }
+    const row = e.target.closest('tr[data-house]'); if (row) { selectHouse(row.dataset.house, { keepTab: true }); scheme.focusNode(row.dataset.house); }
   });
   $('#sw-clear').addEventListener('click', () => { if (confirm('Удалить все показания?')) store.clear(); });
   $('#sw-demo').addEventListener('click', seedDemo);

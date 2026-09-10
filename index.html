@@ -22,16 +22,24 @@
   // поэтому схема работает и в подкаталоге сайта.
   // Если API нет (GitHub Pages, открытый файл), показания хранятся в браузере.
   (async () => {
+    // Сервер считается «есть», если он вообще ответил — пусть даже ошибкой.
+    // Раньше засчитывался только успешный ответ, и одна временная 429 или
+    // 502 переводила страницу в автономный режим: общий журнал молча
+    // становился локальным, а кнопка админки исчезала.
     let apiUrl;
     if (location.protocol.startsWith('http')) {
       const url = new URL('api/readings', location.href);
-      const ctl = new AbortController();
-      const t = setTimeout(() => ctl.abort(), 4000);
-      try {
-        const res = await fetch(url, { signal: ctl.signal });
-        if (res.ok) apiUrl = url.pathname;
-      } catch (e) { /* API рядом нет — работаем на локальной копии */ }
-      clearTimeout(t);
+      for (let attempt = 0; attempt < 2 && !apiUrl; attempt++) {
+        const ctl = new AbortController();
+        const t = setTimeout(() => ctl.abort(), 7000);
+        try {
+          await fetch(url, { signal: ctl.signal });
+          apiUrl = url.pathname;                 // ответил — значит сервер на месте
+        } catch (e) {
+          if (attempt === 0) await new Promise((r) => setTimeout(r, 700));
+        }
+        clearTimeout(t);
+      }
     }
     // Модель посёлка: правится в /admin/ и хранится на сервере.
     // Если её там нет, работает встроенная демо-модель из config.js.
@@ -45,6 +53,7 @@
 
     SW.mount(document.getElementById('water-scheme'), {
       apiUrl,           // общий журнал показаний
+      adminUrl: apiUrl ? 'admin/' : '',   // вход в параметры сети
       config,           // модель сети с сервера, если сохранена
       refreshMs: 25000, // период автообновления; 0 — выключить
     });

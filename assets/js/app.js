@@ -83,7 +83,7 @@ SW.mount = function (container, options) {
     <div class="sw-head-tools">
       <button type="button" class="sw-btn sw-ghost" id="sw-help" title="Что это такое и как этим пользоваться">что это?</button>
       <button type="button" class="sw-btn sw-ghost" id="sw-theme" aria-label="Цветовая схема"></button>
-      ${options.apiUrl ? '<a class="sw-btn sw-ghost sw-admin" href="admin/" title="Параметры сети: трубы, скважины, нормативы. Нужен пароль правления."><span>параметры сети</span><span class="sw-only-admin">только админ</span></a>' : ''}
+      ${options.adminUrl ? `<a class="sw-btn sw-ghost sw-admin" href="${esc(options.adminUrl)}" title="Параметры сети: трубы, скважины, нормативы. Нужен пароль правления."><span>параметры сети</span><span class="sw-only-admin">только админ</span></a>` : ''}
     </div>
   </header>
   <div class="sw-body">

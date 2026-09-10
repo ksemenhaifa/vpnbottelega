@@ -130,6 +130,7 @@ body { font: 14px/1.45 var(--font); }
 .sw-junction { fill: var(--axis); }
 .sw-node { cursor: pointer; }
 .sw-hit { fill: transparent; }
+.sw-admin { text-decoration: none; display: inline-flex; align-items: center; }
 .sw-house-body { stroke: var(--ink-2); stroke-width: 1; stroke-opacity: .55; transition: fill .3s; }
 .sw-house-body.is-empty { fill: none; stroke-dasharray: 2 2; }
 .sw-house-ring { fill: none; stroke: var(--ink); stroke-width: 0; }

@@ -139,6 +139,7 @@ body { font: 14px/1.45 var(--font); }
 .sw-junction { fill: var(--axis); }
 .sw-node { cursor: pointer; }
 .sw-hit { fill: transparent; }
+.sw-admin { text-decoration: none; display: inline-flex; align-items: center; }
 .sw-house-body { stroke: var(--ink-2); stroke-width: 1; stroke-opacity: .55; transition: fill .3s; }
 .sw-house-body.is-empty { fill: none; stroke-dasharray: 2 2; }
 .sw-house-ring { fill: none; stroke: var(--ink); stroke-width: 0; }
@@ -1452,6 +1453,7 @@ SW.mount = function (container, options) {
           <button class="sw-btn" id="sw-zout" aria-label="Отдалить">−</button>
           <button class="sw-btn sw-ghost" id="sw-fit">вся схема</button>
           <button class="sw-btn sw-ghost" id="sw-theme" aria-label="Цветовая схема"></button>
+          ${options.apiUrl ? '<a class="sw-btn sw-ghost sw-admin" href="admin/" title="Параметры сети — вход для правления">параметры</a>' : ''}
         </div>
       </div>
       <div class="sw-canvas" id="sw-canvas">

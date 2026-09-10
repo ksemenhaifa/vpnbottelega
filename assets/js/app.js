@@ -88,6 +88,7 @@ SW.mount = function (container, options) {
           <button class="sw-btn" id="sw-zout" aria-label="Отдалить">−</button>
           <button class="sw-btn sw-ghost" id="sw-fit">вся схема</button>
           <button class="sw-btn sw-ghost" id="sw-theme" aria-label="Цветовая схема"></button>
+          ${options.apiUrl ? '<a class="sw-btn sw-ghost sw-admin" href="admin/" title="Параметры сети — вход для правления">параметры</a>' : ''}
         </div>
       </div>
       <div class="sw-canvas" id="sw-canvas">

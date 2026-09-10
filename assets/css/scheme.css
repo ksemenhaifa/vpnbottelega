@@ -130,7 +130,17 @@ body { font: 14px/1.45 var(--font); }
 .sw-junction { fill: var(--axis); }
 .sw-node { cursor: pointer; }
 .sw-hit { fill: transparent; }
-.sw-admin { text-decoration: none; display: inline-flex; align-items: center; }
+/* Тема и вход в параметры живут в шапке, а не в тулбаре схемы:
+ * это настройки всей страницы, а не инструменты работы с планом. */
+.sw-head-tools { display: flex; align-items: center; gap: 8px; margin-left: auto; align-self: center; }
+.sw-admin { text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
+.sw-only-admin {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--warning); border: 1px solid var(--warning); border-radius: 3px; padding: 1px 5px;
+}
+@media (max-width: 700px) {
+  .sw-head-tools { margin-left: 0; width: 100%; }
+}
 .sw-house-body { stroke: var(--ink-2); stroke-width: 1; stroke-opacity: .55; transition: fill .3s; }
 .sw-house-body.is-empty { fill: none; stroke-dasharray: 2 2; }
 .sw-house-ring { fill: none; stroke: var(--ink); stroke-width: 0; }

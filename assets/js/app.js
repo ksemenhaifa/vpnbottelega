@@ -19,7 +19,7 @@ function showSplash(container, options) {
     + '<div class="sw-splash-t">Стрижи · Водоснабжение</div>'
     + '<div class="sw-splash-s">СХЕМА СЕТИ И ПОКАЗАНИЯ</div>'
     + '<div class="sw-splash-bar"><i></i></div>'
-    + '<div class="sw-splash-by">Created by Semen Kuzminov</div>';
+    + '<div class="sw-splash-by">Created by Semen Kuzminov · web1.co.il</div>';
   let gone = false;
   const drop = () => { if (gone) return; gone = true; el.classList.add('is-out'); setTimeout(() => el.remove(), 500); };
   el.addEventListener('click', drop);
@@ -40,6 +40,7 @@ function showSplash(container, options) {
 SW.mount = function (container, options) {
   options = options || {};
   const cfg = options.config || SW.defaultConfig;
+  const author = cfg.author || (SW.defaultConfig.author || { name: '', site: '', phone: '' });
   const net = SW.buildNetwork(cfg);
   const store = SW.reports.create({ apiUrl: options.apiUrl, key: options.storageKey });
   const H = SW.hydraulics;
@@ -69,6 +70,7 @@ SW.mount = function (container, options) {
     </div>
     <div class="sw-stats" id="sw-stats"></div>
     <div class="sw-head-tools">
+      <button type="button" class="sw-btn sw-ghost" id="sw-help" title="Что это такое и как этим пользоваться">что это?</button>
       <button type="button" class="sw-btn sw-ghost" id="sw-theme" aria-label="Цветовая схема"></button>
       ${options.apiUrl ? '<a class="sw-btn sw-ghost sw-admin" href="admin/" title="Параметры сети: трубы, скважины, нормативы. Нужен пароль правления."><span>параметры сети</span><span class="sw-only-admin">только админ</span></a>' : ''}
     </div>
@@ -152,6 +154,56 @@ SW.mount = function (container, options) {
       <div class="sw-panel" data-panel="diag" hidden><div id="sw-diag"></div></div>
     </aside>
   </div>
+  <dialog class="sw-help" id="sw-help-box" aria-labelledby="sw-help-t">
+    <button type="button" class="sw-help-x" id="sw-help-x" aria-label="Закрыть">×</button>
+    <h2 id="sw-help-t">Что это такое</h2>
+    <p>Схема водопровода посёлка. Она знает, где проложены трубы какого диаметра и откуда подаётся вода,
+      и считает, <b>каким давление должно быть у каждого дома</b> в эту минуту — утром и вечером сеть
+      нагружена по-разному.</p>
+
+    <h2>Зачем</h2>
+    <p>Чтобы жалоба «нет напора» превратилась в цифру и понятную причину. Если у нескольких соседей подряд
+      давление ниже расчётного — дело в магистрали. Если просел один дом, а соседи в норме — дело в его вводе:
+      фильтр, старая подводка, прикрытый кран. Это разные работы и разные деньги, и раньше различить их было нечем.</p>
+
+    <h2>Как снять показание</h2>
+    <ol>
+      <li>Манометр на вводе в дом, после счётчика.</li>
+      <li>Закройте краны в доме, чтобы вода никуда не шла.</li>
+      <li>Подождите 10–15 секунд, пока стрелка успокоится.</li>
+      <li>Запомните число в барах — обычно от 2 до 4.</li>
+    </ol>
+
+    <h2>Как отправить</h2>
+    <p>Нажмите на свой дом прямо на схеме — адрес подставится сам. Или впишите его руками, коротко:
+      <span class="sw-help-k">с17</span> это Сиреневая 17, <span class="sw-help-k">в12</span> — Вишнёвая 12.
+      Дальше давление и, если хотите, пара слов: «вечером еле течёт».</p>
+
+    <h2>Что значат цвета</h2>
+    <ul>
+      <li><b>Красное</b> — давление ниже нормы, воде не хватает напора.</li>
+      <li><b>Синее</b> — выше нормы.</li>
+      <li>Спокойный цвет — всё в порядке.</li>
+      <li>Дом с рамкой — по нему есть свежее показание.</li>
+    </ul>
+    <p>Три кнопки слева переключают, что именно раскрашено: <b>Давление</b> — расчётное у домов,
+      <b>Отклонение</b> — насколько показание разошлось с расчётом, <b>Поток</b> — скорость воды в трубах.
+      Ползунок сверху прокручивает сутки.</p>
+
+    <p class="sw-help-note">Показание живёт 12 часов, потом перестаёт учитываться — сеть за это время
+      успевает измениться. Чужие показания удалять не нужно, даже если они кажутся странными:
+      именно из странных и находятся неисправности.</p>
+    <div class="sw-help-foot">
+      <div class="sw-by">
+        Схему сделал <b>${esc(author.name)}</b><br>
+        <a href="https://${esc(author.site)}" target="_blank" rel="noopener">${esc(author.site)}</a>
+        · <a href="https://wa.me/${esc(author.phone.replace(/\D/g, ''))}" target="_blank" rel="noopener">WhatsApp</a>
+        · <a href="tel:+${esc(author.phone.replace(/\D/g, ''))}">${esc(author.phone)}</a>
+      </div>
+      <button type="button" class="sw-btn sw-primary" id="sw-help-ok">Понятно</button>
+    </div>
+  </dialog>
+
   <div class="sw-toast" id="sw-toast" role="status" aria-live="polite" hidden></div>`;
 
   showSplash(container, options);
@@ -421,6 +473,14 @@ SW.mount = function (container, options) {
   function toast(msg) { const t = $('#sw-toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3500); }
 
   container.querySelectorAll('.sw-tabs [role=tab]').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
+  const helpBox = $('#sw-help-box');
+  const openHelp = () => { if (helpBox.showModal) helpBox.showModal(); else helpBox.setAttribute('open', ''); };
+  const closeHelp = () => { if (helpBox.close) helpBox.close(); else helpBox.removeAttribute('open'); };
+  $('#sw-help').addEventListener('click', openHelp);
+  $('#sw-help-x').addEventListener('click', closeHelp);
+  $('#sw-help-ok').addEventListener('click', closeHelp);
+  helpBox.addEventListener('click', (e) => { if (e.target === helpBox) closeHelp(); });   // клик по фону
+
   applyTheme(readTheme());
   $('#sw-theme').addEventListener('click', () => {
     const i = THEMES.findIndex((t) => t.id === readTheme());

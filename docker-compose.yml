@@ -1,0 +1,19 @@
+services:
+  strizhi-water:
+    build: .
+    image: strizhi-water:latest
+    container_name: strizhi-water
+    restart: unless-stopped
+    # Наружу — только через обратный прокси. Чтобы открыть порт напрямую,
+    # замените на "8080:8080" (тогда сайт будет доступен по http://IP:8080).
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - readings:/data
+    environment:
+      TRUST_PROXY: "1"
+      RATE_LIMIT: "30"      # показаний с одного IP за 10 минут, 0 — без лимита
+      # CORS_ORIGIN: "https://strizhi.example.ru"
+
+volumes:
+  readings:

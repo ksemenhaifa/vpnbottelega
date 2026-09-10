@@ -1,0 +1,53 @@
+# Публикация схемы на GitHub Pages — статическая версия без сервера.
+# Показания в этом режиме хранятся в браузере посетителя (localStorage),
+# общего журнала нет: для него нужен server/server.mjs на своём хосте.
+#
+# Один раз включите в репозитории: Settings → Pages → Source: GitHub Actions.
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Собрать сайт
+        run: |
+          node tools/build-single.mjs
+          node tools/build-single.mjs --fragment
+          mkdir -p _site
+          cp index.html _site/
+          cp -r assets _site/
+          cp -r dist _site/
+          touch _site/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Стрижи · Водоснабжение</title>
+<link rel="stylesheet" href="assets/css/scheme.css">
+</head>
+<body>
+<div id="water-scheme"></div>
+
+<script src="assets/js/config.js"></script>
+<script src="assets/js/address.js"></script>
+<script src="assets/js/hydraulics.js"></script>
+<script src="assets/js/reports.js"></script>
+<script src="assets/js/scheme.js"></script>
+<script src="assets/js/profile.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+  // Общий журнал показаний доступен, если рядом со страницей отвечает API
+  // (server/server.mjs — напрямую или за обратным прокси). Путь относительный,
+  // поэтому схема работает и в подкаталоге сайта.
+  // Если API нет (GitHub Pages, открытый файл), показания хранятся в браузере.
+  (async () => {
+    // Сервер считается «есть», если он вообще ответил — пусть даже ошибкой.
+    // Раньше засчитывался только успешный ответ, и одна временная 429 или
+    // 502 переводила страницу в автономный режим: общий журнал молча
+    // становился локальным, а кнопка админки исчезала.
+    let apiUrl;
+    if (location.protocol.startsWith('http')) {
+      const url = new URL('api/readings', location.href);
+      for (let attempt = 0; attempt < 2 && !apiUrl; attempt++) {
+        const ctl = new AbortController();
+        const t = setTimeout(() => ctl.abort(), 7000);
+        try {
+          await fetch(url, { signal: ctl.signal });
+          apiUrl = url.pathname;                 // ответил — значит сервер на месте
+        } catch (e) {
+          if (attempt === 0) await new Promise((r) => setTimeout(r, 700));
+        }
+        clearTimeout(t);
+      }
+    }
+    // Модель посёлка: правится в /admin/ и хранится на сервере.
+    // Если её там нет, работает встроенная демо-модель из config.js.
+    let config;
+    if (apiUrl) {
+      try {
+        const res = await fetch(new URL('api/config', location.href));
+        if (res.ok) { const c = await res.json(); if (c && c.streets) config = c; }
+      } catch (e) { /* не ответил — берём встроенную */ }
+    }
+
+    SW.mount(document.getElementById('water-scheme'), {
+      apiUrl,           // общий журнал показаний
+      adminUrl: apiUrl ? 'admin/' : '',   // вход в параметры сети
+      config,           // модель сети с сервера, если сохранена
+      refreshMs: 25000, // период автообновления; 0 — выключить
+    });
+  })();
+</script>
+</body>
+</html>

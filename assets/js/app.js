@@ -100,13 +100,13 @@ SW.mount = function (container, options) {
           <output id="sw-hour-out" class="num"></output>
           <button class="sw-btn sw-ghost" id="sw-now" title="Текущее время">сейчас</button>
         </div>
+      </div>
+      <div class="sw-canvas" id="sw-canvas">
         <div class="sw-zoom">
           <button class="sw-btn" id="sw-zin" aria-label="Приблизить">+</button>
           <button class="sw-btn" id="sw-zout" aria-label="Отдалить">−</button>
           <button class="sw-btn sw-ghost" id="sw-fit">вся схема</button>
         </div>
-      </div>
-      <div class="sw-canvas" id="sw-canvas">
         <div class="sw-legend" id="sw-legend"></div>
         <div class="sw-tip" id="sw-tip" hidden></div>
       </div>

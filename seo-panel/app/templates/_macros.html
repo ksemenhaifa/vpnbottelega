@@ -1,0 +1,52 @@
+{% macro change(cur, prev, lower_is_better=False) -%}
+  {%- set d = delta(cur, prev, lower_is_better) -%}
+  {%- if d %}<span class="delta delta-{{ d.tone }}" title="к предыдущим 28 дням">{{ d.arrow }} {{ d.text }}</span>{% endif -%}
+{%- endmacro %}
+
+{% macro status(severity, count=None) -%}
+  <span class="status status-{{ severity }}">
+    <span class="status-icon" aria-hidden="true">{{ {'critical': '✕', 'serious': '!', 'warning': '△', 'good': '✓'}[severity] }}</span>
+    {{- severity_label[severity] }}{% if count %} · {{ count }}{% endif -%}
+  </span>
+{%- endmacro %}
+
+{% macro tile(label, value, cur=None, prev=None, lower_is_better=False, note='') -%}
+  <div class="tile">
+    <div class="tile-label">{{ label }}</div>
+    <div class="tile-value">{{ value }}</div>
+    <div class="tile-foot">{{ change(cur, prev, lower_is_better) }}{% if note %}<span class="muted">{{ note }}</span>{% endif %}</div>
+  </div>
+{%- endmacro %}
+
+{% macro chart(title, series, unit) -%}
+  <figure class="chart" data-unit="{{ unit }}">
+    <figcaption>{{ title }}</figcaption>
+    {% if series %}
+      <div class="chart-plot"></div>
+      <script type="application/json">{{ series|tojson }}</script>
+      <details><summary>Таблицей</summary><div class="chart-table"></div></details>
+    {% else %}
+      <p class="muted">Данных за период нет.</p>
+    {% endif %}
+  </figure>
+{%- endmacro %}
+
+{% macro bars(rows, unit) -%}
+  {% if rows %}
+  <ul class="bars">
+    {% for row in rows %}
+    <li title="{{ row.label }}: {{ row.value|num }} {{ unit }}">
+      <span class="bars-label">{{ row.label }}</span>
+      <span class="bars-track"><span class="bars-fill" data-share="{{ row.share }}"></span></span>
+      <span class="bars-value">{{ row.value|num }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}<p class="muted">Данных за период нет.</p>{% endif %}
+{%- endmacro %}
+
+{% macro fetch_errors(errors) -%}
+  {% for source, message in errors.items() %}
+  <p class="notice notice-error"><strong>{{ source }}:</strong> данные не обновились — {{ message }}</p>
+  {% endfor %}
+{%- endmacro %}

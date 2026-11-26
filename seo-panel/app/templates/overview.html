@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% set nav = 'overview' %}
+{% block content %}
+<h1>Сайты</h1>
+<p class="muted">Показатели за последние 28 дней; изменение — к предыдущим 28 дням.</p>
+
+{% if not google_connected or not yandex_connected %}
+<p class="notice">
+  {% if not google_connected and not yandex_connected %}Google и Яндекс ещё не подключены
+  {% elif not google_connected %}Google ещё не подключён
+  {% else %}Яндекс ещё не подключён{% endif %}
+  — <a href="{{ base }}/connections">подключить</a>. Проверка сайта (noindex, robots.txt, sitemap) работает и без подключений.
+</p>
+{% endif %}
+
+{% if rows %}
+<div class="tiles">
+  {{ m.tile('Сайтов со срочными проблемами', totals.urgent|num, note='из ' ~ rows|length) }}
+  {{ m.tile('Клики из Google', totals.clicks|num, totals.clicks, totals.clicks_prev) }}
+  {{ m.tile('Сессии (Google Analytics)', totals.sessions|num, totals.sessions, totals.sessions_prev) }}
+  {{ m.tile('Визиты (Яндекс Метрика)', totals.visits|num, totals.visits, totals.visits_prev) }}
+</div>
+
+<div class="table-wrap card">
+<table class="data">
+  <thead>
+    <tr>
+      <th rowspan="2">Сайт</th>
+      <th rowspan="2">Состояние</th>
+      <th colspan="3" class="group">Google Search Console</th>
+      <th class="group">Analytics</th>
+      <th colspan="4" class="group">Яндекс</th>
+    </tr>
+    <tr>
+      <th class="n">Клики</th><th class="n">Показы</th><th class="n">Позиция</th>
+      <th class="n">Сессии</th>
+      <th class="n">Визиты</th><th class="n">В поиске</th><th class="n">Исключено</th><th class="n">ИКС</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td><a href="{{ base }}/site/{{ r.domain }}">{{ r.name }}</a>
+        {% if r.errors %}<div class="muted small">часть данных не обновилась</div>{% endif %}</td>
+      <td>{{ m.status(r.worst, r.issues|length) }}</td>
+      {% if r.gsc %}
+        <td class="n">{{ r.gsc.cur.clicks|num }} {{ m.change(r.gsc.cur.clicks, r.gsc.prev.clicks) }}</td>
+        <td class="n">{{ r.gsc.cur.impressions|num }}</td>
+        <td class="n">{{ r.gsc.cur.position|pos }}</td>
+      {% else %}<td class="n muted" colspan="3">{{ 'ждёт обновления' if r.site.gsc else 'нет в Search Console' }}</td>{% endif %}
+      {% if r.ga4 %}<td class="n">{{ r.ga4.cur.sessions|num }} {{ m.change(r.ga4.cur.sessions, r.ga4.prev.sessions) }}</td>
+      {% else %}<td class="n muted">—</td>{% endif %}
+      {% if r.ym %}<td class="n">{{ r.ym.cur.visits|num }} {{ m.change(r.ym.cur.visits, r.ym.prev.visits) }}</td>
+      {% else %}<td class="n muted">—</td>{% endif %}
+      {% if r.ywm %}
+        <td class="n">{{ r.ywm.searchable|num }}</td><td class="n">{{ r.ywm.excluded|num }}</td><td class="n">{{ r.ywm.sqi|num }}</td>
+      {% else %}<td class="n muted" colspan="3">{{ 'ждёт обновления' if r.site.ywm else 'нет в Вебмастере' }}</td>{% endif %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<h2>Что чинить в первую очередь</h2>
+{% set ns = namespace(any=false) %}
+{% for r in rows if r.issues %}
+  {% set ns.any = true %}
+  <section class="card issues">
+    <h3><a href="{{ base }}/site/{{ r.domain }}">{{ r.name }}</a></h3>
+    <ul>
+    {% for i in r.issues[:6] %}
+      <li>{{ m.status(i.severity) }} <span class="issue-title">{{ i.title }}</span>
+        {% if i.detail %}<span class="muted"> — {{ i.detail }}</span>{% endif %}
+        <span class="muted small">({{ i.source }})</span></li>
+    {% endfor %}
+    </ul>
+    {% if r.issues|length > 6 %}<p class="muted small">и ещё {{ r.issues|length - 6 }} — <a href="{{ base }}/site/{{ r.domain }}">все проблемы сайта</a></p>{% endif %}
+  </section>
+{% endfor %}
+{% if not ns.any %}<p class="muted">Проблем не найдено.</p>{% endif %}
+{% else %}
+<p class="notice">Сайтов пока нет. Добавьте сайт вручную ниже или подключите Google и Яндекс — сайты подтянутся сами.</p>
+{% endif %}
+
+<section class="card">
+  <h2>Добавить сайт вручную</h2>
+  <form method="post" action="{{ base }}/sites/add" class="inline">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label for="domain" class="sr">Адрес сайта</label>
+    <input id="domain" name="domain" placeholder="example.ru" required>
+    <button type="submit">Добавить и проверить</button>
+  </form>
+</section>
+{% endblock %}

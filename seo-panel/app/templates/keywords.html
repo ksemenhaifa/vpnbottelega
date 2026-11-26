@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% set nav = 'keywords' %}
+{% block title %}Ключевые слова — SEO-панель{% endblock %}
+{% block content %}
+<h1>Ключевые слова</h1>
+<p class="muted">Частотность запросов по данным Яндекс Wordstat: сколько раз в месяц ищут фразу и какие запросы её содержат.</p>
+
+<section class="card">
+  <h2>Проверить фразы</h2>
+  {% if not ready %}<p class="notice">Сначала <a href="{{ base }}/connections">подключите Яндекс</a>.</p>{% endif %}
+  <form method="post" action="{{ base }}/keywords" class="stack">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label for="phrases">Фразы — по одной в строке, до 20</label>
+    <textarea id="phrases" name="phrases" rows="5" placeholder="купить газовый котёл&#10;фильтр для воды самара" required></textarea>
+    <div class="inline">
+      <div><label for="regions">Регионы (коды Яндекса через запятую)</label>
+        <input id="regions" name="regions" placeholder="например, 225 — вся Россия"></div>
+      <div><label for="domain">Сайт</label>
+        <select id="domain" name="domain"><option value="">— не привязывать —</option>
+          {% for s in sites %}<option value="{{ s.domain }}">{{ s.name }}</option>{% endfor %}</select></div>
+      <button type="submit"{% if not ready %} disabled{% endif %}>Узнать частотность</button>
+    </div>
+  </form>
+</section>
+
+{% for item in items %}
+<section class="card">
+  <div class="card-head">
+    <h2>{{ item.phrase }}</h2>
+    <form method="post" action="{{ base }}/keywords/remove">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="phrase" value="{{ item.phrase }}">
+      <input type="hidden" name="regions" value="{{ item.regions }}">
+      <button type="submit" class="ghost">Удалить</button>
+    </form>
+  </div>
+  <p class="muted small">
+    {% if item.site_name %}{{ item.site_name }} · {% endif %}регионы: {{ item.regions or 'все' }} · получено {{ item.fetched_at|when }}</p>
+  {% if item.error %}<p class="notice notice-error">Wordstat не ответил: {{ item.error }}</p>{% endif %}
+  {% if item.result %}
+    <div class="tiles">
+      <div class="tile"><div class="tile-label">Запросов в месяц</div><div class="tile-value">{{ item.result.total|num }}</div></div>
+    </div>
+    <div class="columns">
+      <div><h3>Запросы с этой фразой</h3>
+        <table class="data"><thead><tr><th>Запрос</th><th class="n">В месяц</th></tr></thead>
+        <tbody>{% for r in item.result.top %}<tr><td>{{ r.phrase }}</td><td class="n">{{ r.count|num }}</td></tr>
+        {% else %}<tr><td colspan="2" class="muted">Нет данных.</td></tr>{% endfor %}</tbody></table></div>
+      <div><h3>Похожие запросы</h3>
+        <table class="data"><thead><tr><th>Запрос</th><th class="n">В месяц</th></tr></thead>
+        <tbody>{% for r in item.result.related %}<tr><td>{{ r.phrase }}</td><td class="n">{{ r.count|num }}</td></tr>
+        {% else %}<tr><td colspan="2" class="muted">Нет данных.</td></tr>{% endfor %}</tbody></table></div>
+    </div>
+  {% endif %}
+</section>
+{% else %}
+<p class="muted">Фраз пока нет.</p>
+{% endfor %}
+{% endblock %}

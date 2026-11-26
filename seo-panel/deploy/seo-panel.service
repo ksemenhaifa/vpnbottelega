@@ -1,0 +1,27 @@
+# systemd unit for the SEO panel. Paths, user and port are examples: adjust
+# them to the server before installing.
+[Unit]
+Description=SEO panel
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=seo-panel
+Group=seo-panel
+WorkingDirectory=/opt/seo-panel
+EnvironmentFile=/etc/seo-panel.env
+# Listens on localhost only; nginx terminates TLS and proxies to it.
+ExecStart=/opt/seo-panel/.venv/bin/uvicorn --factory app.main:create_app --host 127.0.0.1 --port 8787 --workers 1 --no-proxy-headers
+Restart=on-failure
+RestartSec=5
+
+MemoryMax=300M
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/seo-panel
+
+[Install]
+WantedBy=multi-user.target

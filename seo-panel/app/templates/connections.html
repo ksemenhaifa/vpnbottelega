@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% set nav = 'connections' %}
+{% block title %}Подключения — SEO-панель{% endblock %}
+{% macro sources(items) %}
+  <table class="data facts">
+  {% for s in items %}
+    <tr><th>{{ s.label }}</th>
+      <td>{% if s.error %}<span class="notice-inline">ошибка: {{ s.error }}</span>
+          {% elif s.count is not none %}{{ s.count|num }} <span class="muted small">(обновлено {{ s.fetched_at|when }})</span>
+          {% else %}<span class="muted">ещё не загружалось</span>{% endif %}</td></tr>
+  {% endfor %}
+  </table>
+{% endmacro %}
+{% block content %}
+<h1>Подключения</h1>
+<p class="muted">Панель запрашивает доступ только на чтение. Отключить источник можно в любой момент.</p>
+
+<section class="card">
+  <h2>Google — Search Console и Analytics</h2>
+  {% if google.connected %}
+    <p><span class="status status-good"><span class="status-icon" aria-hidden="true">✓</span>Подключено</span></p>
+    {{ sources(google.sources) }}
+    <form method="post" action="{{ base }}/disconnect/google">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button type="submit" class="ghost">Отключить Google</button>
+    </form>
+  {% elif google.configured %}
+    <p><a class="button" href="{{ base }}/connect/google">Подключить Google</a></p>
+    <p class="muted small">Откроется страница Google: войдите в аккаунт, где подтверждены ваши сайты, и разрешите чтение.</p>
+  {% else %}
+    <p class="notice">На сервере ещё не заданы ключи приложения Google (<code>GOOGLE_CLIENT_ID</code>, <code>GOOGLE_CLIENT_SECRET</code>).</p>
+    <ol class="steps">
+      <li>В Google Cloud Console создайте проект и включите API: Search Console API, Google Analytics Data API, Google Analytics Admin API.</li>
+      <li>Создайте учётные данные «OAuth client ID» типа «Web application».</li>
+      <li>В поле «Authorized redirect URIs» укажите: <code>{{ google.redirect_uri }}</code></li>
+      <li>Запишите Client ID и Client secret в файл настроек панели на сервере и перезапустите службу.</li>
+    </ol>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Яндекс — Вебмастер, Метрика и Wordstat</h2>
+  {% if yandex.connected %}
+    <p><span class="status status-good"><span class="status-icon" aria-hidden="true">✓</span>Подключено</span>
+      {% if yandex.expires_at %}<span class="muted small">доступ действует до {{ yandex.expires_at|when }}, продлевается автоматически</span>{% endif %}</p>
+    {{ sources(yandex.sources) }}
+    <form method="post" action="{{ base }}/disconnect/yandex">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button type="submit" class="ghost">Отключить Яндекс</button>
+    </form>
+  {% elif yandex.configured %}
+    <p><a class="button" href="{{ base }}/connect/yandex">Подключить Яндекс</a></p>
+    <p class="muted small">Откроется страница Яндекса: войдите в аккаунт, где подтверждены ваши сайты, и разрешите доступ.</p>
+  {% else %}
+    <p class="notice">На сервере ещё не заданы ключи приложения Яндекса (<code>YANDEX_CLIENT_ID</code>, <code>YANDEX_CLIENT_SECRET</code>).</p>
+    <ol class="steps">
+      <li>На oauth.yandex.ru создайте приложение «Для доступа к API или отладки».</li>
+      <li>Выдайте права: Вебмастер — получение информации о сайтах; Метрика — получение статистики.</li>
+      <li>В поле «Redirect URI» укажите: <code>{{ yandex.redirect_uri }}</code></li>
+      <li>Запишите ClientID и Client secret в файл настроек панели на сервере и перезапустите службу.</li>
+    </ol>
+  {% endif %}
+  <p class="muted small">Wordstat: доступ к API Вордстата Яндекс выдаёт по заявке на конкретное приложение.
+    {% if wordstat_separate_token %}Сейчас для Wordstat задан отдельный токен.{% else %}Панель использует для него тот же доступ, что и для Вебмастера.{% endif %}</p>
+</section>
+{% endblock %}

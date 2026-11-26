@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% set nav = 'overview' %}
+{% block title %}{{ site.name }} — SEO-панель{% endblock %}
+{% block content %}
+<p class="crumbs"><a href="{{ base }}/">Сайты</a> / {{ site.name }}</p>
+<h1>{{ site.name }}</h1>
+{{ m.fetch_errors(errors) }}
+
+<section class="card issues">
+  <h2>Проблемы</h2>
+  {% if issues %}
+  <ul>
+    {% for i in issues %}
+    <li>{{ m.status(i.severity) }} <span class="issue-title">{{ i.title }}</span>
+      {% if i.detail %}<span class="muted"> — {{ i.detail }}</span>{% endif %}
+      <span class="muted small">({{ i.source }})</span></li>
+    {% endfor %}
+  </ul>
+  {% elif d.audit %}<p>{{ m.status('good') }}</p>
+  {% else %}<p class="muted">Сайт ещё не проверялся — нажмите «Обновить данные».</p>{% endif %}
+</section>
+
+{# ---------- Direct site check ---------- #}
+<section class="card">
+  <h2>Проверка сайта</h2>
+  {% if d.audit %}
+  {% set a = d.audit %}
+  <div class="tiles">
+    {{ m.tile('Адресов в sitemap', a.sitemap.total_urls|num) }}
+    {{ m.tile('Проверено из sitemap', a.summary.checked|num) }}
+    {{ m.tile('Из них с noindex', a.summary.noindex|num) }}
+    {{ m.tile('С редиректом', a.summary.redirect|num) }}
+    {{ m.tile('Не найдено (404)', a.summary.not_found|num) }}
+    {{ m.tile('Закрыто в robots.txt', [a.summary.blocked_google, a.summary.blocked_yandex]|max|num) }}
+  </div>
+  <table class="data facts">
+    <tr><th>Главная страница</th>
+      <td>{% if a.home.error %}{{ a.home.error }}{% else %}код {{ a.home.status }}{% if a.home.redirected %}, после редиректа на {{ a.home.final_url }}{% endif %}{% endif %}</td></tr>
+    <tr><th>Заголовок (title)</th><td>{{ a.home.title or '—' }}</td></tr>
+    <tr><th>Мета-тег robots</th><td>{{ a.home.robots_meta or 'не задан — индексация разрешена' }}</td></tr>
+    <tr><th>Canonical</th><td>{{ a.home.canonical or 'не задан' }}</td></tr>
+    <tr><th>robots.txt</th>
+      <td>{% if not a.robots.exists %}не найден{% if a.robots.status %} (код {{ a.robots.status }}){% endif %}
+          {% else %}есть; главная для Google — {{ 'закрыта' if a.robots.blocks_google else 'открыта' }},
+          для Яндекса — {{ 'закрыта' if a.robots.blocks_yandex else 'открыта' }}{% endif %}</td></tr>
+    <tr><th>Файлы sitemap</th>
+      <td>{% for f in a.sitemap.files %}<div>{{ f.url }} — {% if f.error %}{{ f.error }}{% else %}адресов: {{ f.urls|num }}{% endif %}</div>{% else %}—{% endfor %}</td></tr>
+  </table>
+
+  <h3>Страницы с замечаниями</h3>
+  {% if problem_pages %}
+  <div class="table-wrap">
+  <table class="data">
+    <thead><tr><th>Адрес</th><th>Что не так</th><th>Мета robots</th><th>Canonical</th></tr></thead>
+    <tbody>
+    {% for p in problem_pages %}
+      <tr><td class="url">{{ p.url }}{% if not p.in_sitemap %} <span class="muted small">(отслеживаемый)</span>{% endif %}</td>
+        <td>{{ p.flags|join(', ') }}</td>
+        <td>{{ p.robots_meta or '—' }}</td>
+        <td class="url">{{ p.canonical if p.canonical_mismatch else '—' }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% if a.sitemap.total_urls > a.summary.checked %}
+  <p class="muted small">Проверена выборка: {{ a.summary.checked|num }} из {{ a.sitemap.total_urls|num }} адресов sitemap.</p>
+  {% endif %}
+  {% else %}<p class="muted">Среди проверенных страниц замечаний нет.</p>{% endif %}
+  {% else %}<p class="muted">Проверка ещё не выполнялась.</p>{% endif %}
+</section>
+
+{# ---------- Google Search Console ---------- #}
+<section class="card">
+  <h2>Google Search Console</h2>
+  {% if d.gsc %}
+  {% set g = d.gsc %}
+  <p class="muted small">{{ g.range.cur[0]|day }} — {{ g.range.cur[1]|day }}; ресурс {{ g.site_url }}</p>
+  <div class="tiles">
+    {{ m.tile('Клики', g.cur.clicks|num, g.cur.clicks, g.prev.clicks) }}
+    {{ m.tile('Показы', g.cur.impressions|num, g.cur.impressions, g.prev.impressions) }}
+    {{ m.tile('CTR', g.cur.ctr|pct, g.cur.ctr, g.prev.ctr) }}
+    {{ m.tile('Средняя позиция', g.cur.position|pos, g.cur.position, g.prev.position, True) }}
+  </div>
+  <div class="charts">
+    {{ m.chart('Клики по дням', charts.gsc_clicks, 'кликов') }}
+    {{ m.chart('Показы по дням', charts.gsc_impressions, 'показов') }}
+  </div>
+
+  <h3>Проверка индексации страниц</h3>
+  <div class="table-wrap">
+  <table class="data">
+    <thead><tr><th>Адрес</th><th>Вердикт Google</th><th>Статус</th><th>robots.txt</th><th>Индексирование</th><th>Последний обход</th></tr></thead>
+    <tbody>
+    {% for i in g.inspections %}
+      <tr><td class="url">{{ i.url }}</td>
+      {% if i.error %}<td colspan="5" class="muted">{{ i.error }}</td>
+      {% else %}
+        <td>{{ {'PASS': 'В индексе', 'NEUTRAL': 'Не в индексе', 'FAIL': 'Ошибка', 'PARTIAL': 'Частично'}.get(i.verdict, i.verdict or '—') }}</td>
+        <td>{{ i.coverageState or '—' }}</td>
+        <td>{{ {'ALLOWED': 'разрешено', 'DISALLOWED': 'запрещено'}.get(i.robotsTxtState, i.robotsTxtState or '—') }}</td>
+        <td>{{ {'INDEXING_ALLOWED': 'разрешено', 'BLOCKED_BY_META_TAG': 'запрещено мета-тегом noindex', 'BLOCKED_BY_HTTP_HEADER': 'запрещено заголовком', 'BLOCKED_BY_ROBOTS_TXT': 'запрещено в robots.txt'}.get(i.indexingState, i.indexingState or '—') }}</td>
+        <td>{{ i.lastCrawlTime|day }}</td>
+      {% endif %}</tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+  <div class="columns">
+    <div>
+      <h3>Запросы</h3>
+      <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Запрос</th><th class="n">Клики</th><th class="n">Показы</th><th class="n">CTR</th><th class="n">Позиция</th></tr></thead>
+        <tbody>{% for q in g.queries %}
+          <tr><td>{{ q.query }}</td><td class="n">{{ q.clicks|num }}</td><td class="n">{{ q.impressions|num }}</td><td class="n">{{ q.ctr|pct }}</td><td class="n">{{ q.position|pos }}</td></tr>
+        {% else %}<tr><td colspan="5" class="muted">Запросов за период нет.</td></tr>{% endfor %}</tbody>
+      </table>
+      </div>
+    </div>
+    <div>
+      <h3>Страницы</h3>
+      <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Страница</th><th class="n">Клики</th><th class="n">Показы</th><th class="n">Позиция</th></tr></thead>
+        <tbody>{% for p in g.pages %}
+          <tr><td class="url">{{ p.page }}</td><td class="n">{{ p.clicks|num }}</td><td class="n">{{ p.impressions|num }}</td><td class="n">{{ p.position|pos }}</td></tr>
+        {% else %}<tr><td colspan="4" class="muted">Данных за период нет.</td></tr>{% endfor %}</tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+
+  <h3>Файлы Sitemap в Search Console</h3>
+  <div class="table-wrap">
+  <table class="data">
+    <thead><tr><th>Файл</th><th class="n">Ошибки</th><th class="n">Предупреждения</th><th>Загружен</th></tr></thead>
+    <tbody>{% for s in g.sitemaps %}
+      <tr><td class="url">{{ s.path }}</td><td class="n">{{ s.errors|int|num }}</td><td class="n">{{ s.warnings|int|num }}</td>
+        <td>{{ 'в очереди' if s.pending else s.last_downloaded|day }}</td></tr>
+    {% else %}<tr><td colspan="4" class="muted">Sitemap в Search Console не добавлен.</td></tr>{% endfor %}</tbody>
+  </table>
+  </div>
+  {% elif site.gsc %}<p class="muted">Данные ещё не загружены.</p>
+  {% else %}<p class="muted">Сайта нет среди ресурсов подключённого аккаунта Search Console.</p>{% endif %}
+</section>
+
+{# ---------- Google Analytics ---------- #}
+<section class="card">
+  <h2>Google Analytics</h2>
+  {% if d.ga4 %}
+  <div class="tiles">
+    {{ m.tile('Сессии', d.ga4.cur.sessions|num, d.ga4.cur.sessions, d.ga4.prev.sessions) }}
+    {{ m.tile('Пользователи', d.ga4.cur.users|num, d.ga4.cur.users, d.ga4.prev.users) }}
+  </div>
+  <div class="columns">
+    {{ m.chart('Сессии по дням', charts.ga4_sessions, 'сессий') }}
+    <div><h3>Каналы, сессии</h3>{{ m.bars(channels, 'сессий') }}</div>
+  </div>
+  {% elif site.ga4 %}<p class="muted">Данные ещё не загружены.</p>
+  {% else %}<p class="muted">Для сайта не найден ресурс GA4 в подключённом аккаунте.</p>{% endif %}
+</section>
+
+{# ---------- Yandex Webmaster ---------- #}
+<section class="card">
+  <h2>Яндекс Вебмастер</h2>
+  {% if d.ywm %}
+  <div class="tiles">
+    {{ m.tile('ИКС', d.ywm.sqi|num) }}
+    {{ m.tile('Страниц в поиске', d.ywm.searchable|num) }}
+    {{ m.tile('Исключено', d.ywm.excluded|num) }}
+  </div>
+  <h3>Популярные запросы</h3>
+  <div class="table-wrap">
+  <table class="data">
+    <thead><tr><th>Запрос</th><th class="n">Показы</th><th class="n">Клики</th><th class="n">Позиция</th></tr></thead>
+    <tbody>{% for q in d.ywm.queries %}
+      <tr><td>{{ q.query }}</td><td class="n">{{ q.shows|num }}</td><td class="n">{{ q.clicks|num }}</td><td class="n">{{ q.position|pos }}</td></tr>
+    {% else %}<tr><td colspan="4" class="muted">Запросов нет.</td></tr>{% endfor %}</tbody>
+  </table>
+  </div>
+  {% elif site.ywm %}<p class="muted">Данные ещё не загружены.</p>
+  {% else %}<p class="muted">Сайта нет среди подтверждённых в Яндекс Вебмастере.</p>{% endif %}
+</section>
+
+{# ---------- Yandex Metrika ---------- #}
+<section class="card">
+  <h2>Яндекс Метрика</h2>
+  {% if d.ym %}
+  <div class="tiles">
+    {{ m.tile('Визиты', d.ym.cur.visits|num, d.ym.cur.visits, d.ym.prev.visits) }}
+    {{ m.tile('Посетители', d.ym.cur.users|num, d.ym.cur.users, d.ym.prev.users) }}
+  </div>
+  <div class="columns">
+    {{ m.chart('Визиты по дням', charts.ym_visits, 'визитов') }}
+    <div><h3>Источники, визиты</h3>{{ m.bars(ym_sources, 'визитов') }}</div>
+  </div>
+  {% elif site.ym %}<p class="muted">Данные ещё не загружены.</p>
+  {% else %}<p class="muted">Для сайта не найден счётчик в подключённом аккаунте Метрики.</p>{% endif %}
+</section>
+
+<section class="card">
+  <h2>Отслеживаемые страницы</h2>
+  <p class="muted">Эти адреса проверяются при каждом обновлении: панель смотрит noindex, редиректы и robots.txt, а Google — статус в индексе. По одному адресу в строке, до 20.</p>
+  <form method="post" action="{{ base }}/site/{{ site.domain }}/urls">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label for="urls" class="sr">Адреса страниц</label>
+    <textarea id="urls" name="urls" rows="5" placeholder="https://{{ site.name }}/uslugi/">{{ watch_urls|join('\n') }}</textarea>
+    <button type="submit">Сохранить и проверить</button>
+  </form>
+</section>
+
+{% if site.manual %}
+<form method="post" action="{{ base }}/site/{{ site.domain }}/remove" class="danger-zone">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <button type="submit" class="ghost">Убрать сайт из списка добавленных вручную</button>
+</form>
+{% endif %}
+{% endblock %}

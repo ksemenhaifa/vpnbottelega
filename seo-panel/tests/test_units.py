@@ -192,3 +192,43 @@ def test_delta_and_number_formatting():
     assert delta(8.0, 10.0, lower_is_better=True)["tone"] == "up"   # position improved
     assert delta(5, 0) is None and delta(None, 5) is None
     assert fmt_num(1234567) == "1 234 567" and fmt_num(None) == "—" and fmt_num(12.34) == "12,3"
+
+
+def test_parse_sitemap_ignores_image_entries():
+    pages, _ = audit.parse_sitemap(
+        b'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
+        b'xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">'
+        b'<url><loc>https://s.ru/a</loc><image:image><image:loc>https://s.ru/a.jpg</image:loc></image:image></url></urlset>')
+    assert pages == ["https://s.ru/a"]
+
+
+def test_whole_domain_redirect_is_reported_as_such():
+    def handler(request):
+        if request.url.host == "old.ru":
+            return fakes.httpx.Response(301, headers={"location": f"https://new.ru{request.url.path}"})
+        return fakes.httpx.Response(200, text="<title>New</title>", headers={"content-type": "text/html"})
+
+    async def run():
+        async with fakes.httpx.AsyncClient(transport=fakes.httpx.MockTransport(handler)) as client:
+            return await audit.audit_site(client, "old.ru", host_checker=fakes.any_host)
+
+    issues = audit_issues(asyncio.run(run()))
+    assert [i["title"] for i in issues] == ["Домен целиком перенаправляет на другой сайт"]
+    assert "new.ru" in issues[0]["detail"] and issues[0]["severity"] == "warning"
+
+
+def test_single_dropped_connection_is_retried():
+    calls = {"n": 0}
+
+    def handler(request):
+        if request.url.path == "/" :
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise fakes.httpx.ConnectError("dropped", request=request)
+        return fakes.handler(request)
+
+    async def run():
+        async with fakes.httpx.AsyncClient(transport=fakes.httpx.MockTransport(handler)) as client:
+            return await audit.audit_site(client, fakes.SITE, host_checker=fakes.any_host)
+
+    assert asyncio.run(run())["home"]["status"] == 200

@@ -62,7 +62,8 @@ class _Fetcher:
         """Follow redirects by hand so every hop is checked; never raises."""
         chain: list[dict] = []
         current = url
-        for _ in range(MAX_REDIRECTS + 1):
+        retries_left = 1
+        for _ in range(MAX_REDIRECTS + 2):
             if not await self._allowed(current):
                 return {"url": url, "final_url": current, "status": None, "chain": chain,
                         "headers": {}, "body": b"", "error": "адрес недоступен для проверки"}
@@ -83,6 +84,10 @@ class _Fetcher:
                     return {"url": url, "final_url": current, "status": response.status_code, "chain": chain,
                             "headers": dict(response.headers), "body": body[:limit], "error": None}
             except httpx.HTTPError as exc:
+                if retries_left:
+                    retries_left -= 1
+                    await asyncio.sleep(1.0)
+                    continue
                 return {"url": url, "final_url": current, "status": None, "chain": chain,
                         "headers": {}, "body": b"", "error": f"нет ответа ({type(exc).__name__})"}
         return {"url": url, "final_url": current, "status": None, "chain": chain,
@@ -238,7 +243,14 @@ def parse_sitemap(body: bytes) -> tuple[list[str], list[str]]:
         root = ElementTree.fromstring(body)
     except ElementTree.ParseError as exc:
         raise ValueError("sitemap не является корректным XML") from exc
-    locs = [el.text.strip() for el in root.iter() if el.tag.endswith("}loc") or el.tag == "loc" if el.text]
+    # Only <loc> directly under <url>/<sitemap>: image and video extensions
+    # carry their own <image:loc> elements, which are not pages.
+    locs = []
+    for entry in root:
+        for child in entry:
+            if child.tag.rsplit("}", 1)[-1] == "loc" and "image" not in child.tag and "video" not in child.tag:
+                if child.text and child.text.strip():
+                    locs.append(child.text.strip())
     if root.tag.endswith("sitemapindex"):
         return [], locs
     return locs, []
@@ -338,4 +350,5 @@ async def audit_site(
         "blocked_google": sum(p["blocked_google"] for p in listed),
         "blocked_yandex": sum(p["blocked_yandex"] for p in listed),
     }
-    return {"home": home, "robots": robots_info, "sitemap": sitemap_info, "pages": pages, "summary": summary}
+    return {"domain": domain, "home": home, "robots": robots_info, "sitemap": sitemap_info,
+            "pages": pages, "summary": summary}

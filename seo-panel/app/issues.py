@@ -1,6 +1,8 @@
 """Turn cached data into a prioritised list of problems per site."""
 from __future__ import annotations
 
+from .sites import display_domain, normalize_domain
+
 SEVERITIES = ("critical", "serious", "warning")
 SEVERITY_LABEL = {"critical": "Срочно", "serious": "Важно", "warning": "Желательно", "good": "Проблем не найдено"}
 
@@ -44,6 +46,11 @@ def audit_issues(audit: dict | None) -> list[dict]:
     home, robots, summary = audit["home"], audit["robots"], audit["summary"]
     source = "Проверка сайта"
 
+    moved_to = normalize_domain(home["final_url"]) if home["redirected"] else ""
+    if moved_to and moved_to != audit.get("domain", moved_to):
+        # The whole domain forwards elsewhere: its own pages are not expected in the index.
+        return [_issue("warning", source, "Домен целиком перенаправляет на другой сайт",
+                       f"Все адреса ведут на {display_domain(moved_to)}. В поиске должен быть тот сайт, а не этот.")]
     if home["error"]:
         out.append(_issue("critical", source, "Главная страница не открывается", home["error"]))
     elif home["status"] != 200:
